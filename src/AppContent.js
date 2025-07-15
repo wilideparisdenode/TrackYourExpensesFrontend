@@ -57,7 +57,7 @@ export default function AppContent() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/expense_category" element={<ExpenseCategories />} />
+            {/* <Route path="/expense_category" element={<ExpenseCategories />} /> */}
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/expenses" element={<Expenses />} />

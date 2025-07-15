@@ -98,7 +98,7 @@ function Signup() {
         <div className="login-footer">
           <p>
             Already have an account?{" "}
-            <Link to="/login">signup</Link>
+            <Link to="/login">login</Link>
           </p>
         </div>
       </div>

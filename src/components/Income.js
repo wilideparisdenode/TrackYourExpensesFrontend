@@ -124,7 +124,7 @@ const Income = () => {
     )
   }
 
-  const totalIncome = income.reduce((sum, item) => sum + (item.amount || 0), 0)
+  const totalIncome = income.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
 
   return (
     <div className="income">

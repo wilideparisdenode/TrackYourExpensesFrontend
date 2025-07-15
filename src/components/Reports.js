@@ -56,12 +56,13 @@ const Reports = () => {
         user_id: user.id,
         budget_id
       })
+      console.log(response)
 
       if (response?.success === false) {
         throw new Error(response.error || "Failed to generate report")
       }
 
-      setReportData(response)
+      setReportData(response.data)
       setSuccess("Report generated successfully!")
     } catch (error) {
       setError(error.message || "Failed to generate report")

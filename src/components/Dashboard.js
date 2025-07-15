@@ -26,6 +26,7 @@ const Dashboard = () => {
     recentIncome: [],
   })
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -34,14 +35,26 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [budgets, expenses, income] = await Promise.all([
-        apiService.getBudgets(),
+      setError(null)
+    
+      // Fetch all data in parallel
+      const [budgetsResponse, expensesResponse, incomeResponse] = await Promise.all([
+        apiService.viewBudgets(user.id),
         apiService.getExpensesByUserId(user.id),
-        apiService.getIncomeByUserId(user.id),
+        apiService.get(`/income/user/${user.id}`)
       ])
 
-      const totalIncome = income.reduce((sum, item) => sum + (item.amount || 0), 0)
-      const totalExpenses = expenses.reduce((sum, item) => sum + (item.amount || 0), 0)
+      // Ensure we have arrays to work with
+      const budgets = Array.isArray(budgetsResponse.data) ? budgetsResponse.data : []
+      const expenses = Array.isArray(expensesResponse?.data) ? expensesResponse.data : []
+      const income = Array.isArray(incomeResponse) ? incomeResponse : []
+
+      console.log("Budgets:", budgetsResponse)
+      console.log("Expenses:", expenses)
+      console.log("Income:", incomeResponse)
+
+      const totalIncome = income.reduce((sum , item) => sum + (parseFloat( item.amount)), 0)
+      const totalExpenses = expenses.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
 
       setDashboardData({
         totalIncome,
@@ -52,6 +65,7 @@ const Dashboard = () => {
       })
     } catch (error) {
       console.error("Error loading dashboard data:", error)
+      setError("Failed to load dashboard data. Please try again later.")
     } finally {
       setLoading(false)
     }
@@ -66,10 +80,21 @@ const Dashboard = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="dashboard-error">
+        <p>{error}</p>
+        <button onClick={loadDashboardData}>Retry</button>
+      </div>
+    )
+  }
+
   const balance = dashboardData.totalIncome - dashboardData.totalExpenses
   const balancePercentage = dashboardData.totalIncome > 0 
     ? Math.abs((balance / dashboardData.totalIncome) * 100).toFixed(1)
     : 0
+
+
 
   return (
     <div className="dashboard">
@@ -160,7 +185,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <div className={`transaction-amount ${item.amount >= 0 ? 'income' : 'expense'}`}>
-                    {item.amount >= 0 ? '+' : '-'}${Math.abs(item.amount).toFixed(2)}
+                    {item.amount >= 0 ? '+' : '-'}${Math.abs(item.amount)}
                   </div>
                 </div>
               ))
@@ -188,16 +213,16 @@ const Dashboard = () => {
           <div className="budget-list">
             {dashboardData.budgets.length > 0 ? (
               dashboardData.budgets.map((budget, index) => {
-                const percentage = Math.min((budget.spent / budget.amount) * 100, 100)
+                const percentage = Math.min((budget.spent /parseFloat(budget.amount)) * 100, 100)
                 const status = percentage > 90 ? 'over' : percentage > 70 ? 'warning' : 'good'
                 
                 return (
                   <div key={index} className="budget-item">
                     <div className="budget-info">
-                      <span className="budget-name">{budget.name || "Unnamed Budget"}</span>
+                      <span className="budget-name">{budget.description || "Unnamed Budget"}</span>
                       <div className="budget-meta">
-                        <span className="budget-spent">${budget.spent.toFixed(2)}</span>
-                        <span className="budget-total">of ${budget.amount.toFixed(2)}</span>
+                        <span className="budget-spent">${budget.spent}</span>
+                        <span className="budget-total">of ${budget.amount}</span>
                       </div>
                     </div>
                     <div className={`budget-progress ${status}`}>

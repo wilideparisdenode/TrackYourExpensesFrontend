@@ -30,7 +30,8 @@ const Budgets = () => {
     try {
       setLoading(true)
       const data = await apiService.get(`/budget/${user.id}`)
-      setBudgets(data)
+      setBudgets(data.data)
+      
     } catch (error) {
       setError("Failed to load budgets")
       console.error("Error loading budgets:", error)

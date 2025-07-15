@@ -26,6 +26,7 @@ const Users = () => {
       setLoading(true)
       const data = await apiService.getUsers()
       setUsers(data)
+      console.log(data)
     } catch (error) {
       setError("Failed to load users")
       console.error("Error loading users:", error)
@@ -132,7 +133,7 @@ const Users = () => {
                   <td>
                     <span className={`user-role ${user.role}`}>{user.role}</span>
                   </td>
-                  <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</td>
+                  <td>{user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}</td>
                   <td>
                     <div className="action-buttons">
                       <button className="btn btn-secondary btn-sm" onClick={() => openModal(user)}>

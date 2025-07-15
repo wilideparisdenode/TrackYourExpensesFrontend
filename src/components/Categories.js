@@ -24,6 +24,7 @@ const Categories = () => {
       setLoading(true)
       const data = await apiService.get("/category")
       setCategories(data)
+      console.log(data)
     } catch (error) {
       setError("Failed to load categories")
       console.error("Error loading categories:", error)

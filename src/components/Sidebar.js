@@ -19,7 +19,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: "/expenses", label: "Expenses", icon: <CurrencyExchange className="sidebar-icon" /> },
     { path: "/income", label: "Income", icon: <CashStack className="sidebar-icon" /> },
     { path: "/categories", label: "Categories", icon: <FolderFill className="sidebar-icon" /> },
-    { path: "/expense_category", label: "ExpenseCategory", icon: <FolderFill className="sidebar-icon" /> },
+    // { path: "/expense_category", label: "ExpenseCategory", icon: <FolderFill className="sidebar-icon" /> },
     { path: "/reports", label: "Reports", icon: <GraphUp className="sidebar-icon" /> },
     { path: "/users", label: "Users", icon: <PeopleFill className="sidebar-icon" /> },
   ];
