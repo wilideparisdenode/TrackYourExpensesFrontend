@@ -47,8 +47,10 @@ const Income = () => {
       }
 
       if (editingIncome) {
-        await apiService.put(`/income/${editingIncome.id}`, incomeData)
-        setSuccess("Income updated successfully!")
+        // console.log(editingIncome)
+        const d=await apiService.editIncome(editingIncome,editingIncome._id);
+        setSuccess("Income updated successfully!");
+        console.log(d);
       } else {
         // the add functionality is working
         await apiService.post("/income/add", incomeData)

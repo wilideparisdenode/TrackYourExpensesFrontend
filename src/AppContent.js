@@ -7,6 +7,8 @@ import "./App.css";
 
 // Components
 import ExpenseCategories from "./components/ExpenseCategories";
+
+// import ChatToggleButton from './ChatToggleButton';
 import Signup from "./components/Signup";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
@@ -18,6 +20,7 @@ import Reports from "./components/Reports";
 import Users from "./components/Users";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import BotpressChat from "./components/BotpressChat";
 
 export default function AppContent() {
   const { user, loading } = useAuth();
@@ -50,6 +53,8 @@ export default function AppContent() {
   // Logged in: Show app layout
   return (
     <div className="app-container">
+          <BotpressChat/>
+         
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       <main className={`main-content ${sidebarOpen ? "expanded" : ""}`}>
         <Header toggleSidebar={toggleSidebar} />

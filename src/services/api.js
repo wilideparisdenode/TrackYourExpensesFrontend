@@ -1,9 +1,10 @@
-const API_BASE_URL = "https://trackyourexpensesbackend.onrender.com";
+const API_BASE_URL =  "https://trackyourexpensesbackend.onrender.com"
 
 class ApiService {
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`
     const token = localStorage.getItem("token")
+    console.log(token);
 
     const config = {
       headers: {
@@ -110,7 +111,13 @@ class ApiService {
       body: incomeData,
     })
   }
-
+  async editIncome(incomeData,id) {
+    console.log(incomeData,id)
+    return this.request(`/income/${id}`, {
+      method: "PUT",
+      body: incomeData,
+    })
+  }
   async getIncomeByUserId(userId) {
     return this.request(`/income/user/${userId}`)
   }
