@@ -1,0 +1,83 @@
+.report-summary, .report-summary *, .report-results, .report-results *, .summary-item, .summary-item *, .summary-label, .summary-value, .summary-grid, .summary-grid *, .card-header, .card-header *, .card-title, .card-title *, .report-label, .report-label *, .report-card, .report-card *, .report-table, .report-table *, .report, .report * {
+  background: #112d4e !important;
+  color: #ffffff !important;
+}
+
+.card, .card-header, .card-header *, .card, .card * {
+  background: #112d4e !important;
+  color: #ffffff !important;
+}
+
+.btn-primary {
+  background: #3a7ca5;
+  color: #f0f4f8;
+}
+
+.btn-primary:hover {
+  background: #1e3a5c;
+}
+
+.report-config {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .report-results {
+    margin-top: 30px;
+  }
+  
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 15px;
+    background: #112d4e !important;
+    color: #ffffff !important;
+    border-radius: 8px;
+  }
+  
+  .summary-label {
+    font-size: 0.9rem;
+    color: #ffffff !important;
+    font-weight: 500;
+  }
+  
+  .summary-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff !important;
+  }
+  
+  .income-amount, .expense-amount {
+    color: #ffffff !important;
+  }
+
+.alert-success {
+  background: #14532d !important;
+  color: #ffffff !important;
+}
+  
+  @media (max-width: 768px) {
+    .report-config {
+      flex-direction: column;
+      gap: 15px;
+      align-items: stretch;
+    }
+    
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }

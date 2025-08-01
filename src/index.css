@@ -1,0 +1,68 @@
+body, html {
+  background: #0a192f !important;
+  color: #ffffff !important;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background: #0a192f !important;
+  color: #ffffff !important;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  color: #ffffff !important;
+  background: #112d4e !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.mobile-menu-button {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-button {
+    display: block;
+  }
+}
+
+table, th, td {
+  background: #112d4e !important;
+  color: #ffffff !important;
+  border-color: #3a7ca5 !important;
+}
+
+.btn, .btn-primary, button {
+  color: #ffffff !important;
+}
+
+.form-label, label, .form-control, input, select, textarea {
+  color: #ffffff !important;
+}
+
+.card, .summary-card, .page-header, .modal-content, .dashboard-card, .header, .login-card, .sidebar, .reports, .report-summary, .stat-item, .activity-card, .budget-card, .form-group, .card-header, .card-title, .page-title, .table-title, .modal-header, .modal-title, .alert, .alert-error, .alert-success, .no-expenses, .no-data, .report-results, .report-summary, .category-form, .user-form, .budget-form, .income-form, .expenses-table, .dashboard-table, .users-table, .budgets-table, .categories-table, .income-table, .report-table, th, td, label, .form-label, input, select, textarea, .btn, .btn-primary, button {
+  color: #ffffff !important;
+}
+
+.welcome-message, .dashboard-welcome, .dashboard-greeting, .greeting, .welcome, .welcome-text, .user-greeting, .user-welcome, .user-header, .user-title, .user-label, .text-dark, .text-secondary, .text-muted, .subtitle, .subtext, .label, .header-title, .card-title, .modal-title, .table-title, .alert, .alert-error, .alert-success, .no-expenses, .no-data, .category-label, .budget-label, .income-label, .expense-label, .report-label, .user-label, .sidebar-label, .sidebar-title, .sidebar-header, .sidebar-user, .sidebar-greeting, .sidebar-welcome, .sidebar-text, .sidebar-link, .sidebar-menu, .sidebar-section, .sidebar-footer, .sidebar-username, .sidebar-role, .sidebar-email {
+  color: #ffffff !important;
+}

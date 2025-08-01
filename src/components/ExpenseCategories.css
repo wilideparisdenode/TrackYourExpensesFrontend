@@ -1,0 +1,101 @@
+.categories-container {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 20px;
+  }
+  
+  .title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .error {
+    color: red;
+    margin-bottom: 10px;
+  }
+  
+  .category-form {
+    background: #f7f7f7;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  
+  .category-form .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .category-form label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  
+  .category-form input {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  
+  .category-form button {
+    padding: 6px 12px;
+    border: none;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-right: 8px;
+  }
+  
+  .category-form .cancel-btn {
+    background: #6c757d;
+  }
+  
+  .category-form button:hover {
+    opacity: 0.9;
+  }
+  
+  .categories-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .categories-table th,
+  .categories-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .categories-table th {
+    background: #f1f1f1;
+  }
+  
+  .categories-table .edit-btn {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-right: 4px;
+    border-radius: 3px;
+  }
+  
+  .categories-table .edit-btn:hover {
+    background: #218838;
+  }
+  
+  .categories-table .delete-btn {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  
+  .categories-table .delete-btn:hover {
+    background: #b52a37;
+  }
+  
