@@ -111,7 +111,7 @@ const Dashboard = () => {
           </div>
           <div className="card-content">
             <h3 className="card-title">Total Income</h3>
-            <p className="card-amount">${dashboardData.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="card-amount">CFA{dashboardData.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <p className="card-trend positive">
               <ArrowUpRight size={14} /> 
               <span>All time</span>
@@ -125,7 +125,7 @@ const Dashboard = () => {
           </div>
           <div className="card-content">
             <h3 className="card-title">Total Expenses</h3>
-            <p className="card-amount">${dashboardData.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="card-amount">CFA{dashboardData.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <p className="card-trend negative">
               <ArrowDownRight size={14} /> 
               <span>All time</span>
@@ -185,7 +185,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <div className={`transaction-amount ${item.amount >= 0 ? 'income' : 'expense'}`}>
-                    {item.amount >= 0 ? '+' : '-'}${Math.abs(item.amount)}
+                    {item.amount >= 0 ? '+' : '-'}CFA{Math.abs(item.amount)}
                   </div>
                 </div>
               ))
@@ -221,7 +221,7 @@ const Dashboard = () => {
                     <div className="budget-info">
                       <span className="budget-name">{budget.description || "Unnamed Budget"}</span>
                       <div className="budget-meta">
-                        <span className="budget-spent">${budget.spent}</span>
+                        <span className="budget-spent">CFA{budget.spent}</span>
                         <span className="budget-total">of ${budget.amount}</span>
                       </div>
                     </div>
