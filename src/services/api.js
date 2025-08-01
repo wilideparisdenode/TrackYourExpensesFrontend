@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://trackyourexpensesbackend.onrender.com/";
+const API_BASE_URL = "https://trackyourexpensesbackend.onrender.com";
 
 class ApiService {
   async request(endpoint, options = {}) {
