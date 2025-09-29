@@ -71,7 +71,7 @@ const trackBudget = async (budget) => {
       }
 
       if (editingBudget) {
-        await apiService.put(`/budgets/${editingBudget.id}`, budgetData)
+        await apiService.put(`/budgets/${editingBudget._id}`, budgetData)
         setSuccess("Budget updated successfully!")
       } else {
         await apiService.post("/budget/create_budget", budgetData)
@@ -182,7 +182,7 @@ const trackBudget = async (budget) => {
                       </button>
                       <button 
                         className="btn btn-delete btn-sm" 
-                        onClick={() => handleDelete(budget.id)}
+                        onClick={() => handleDelete(budget._id)}
                       >
                         Delete
                       </button>

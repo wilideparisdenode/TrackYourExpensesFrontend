@@ -135,7 +135,7 @@ const Categories = () => {
                       </button>
                       <button 
                         className="btn btn-delete btn-sm" 
-                        onClick={() => handleDelete(category.id)}
+                        onClick={() => handleDelete(category._id)}
                       >
                         Delete
                       </button>

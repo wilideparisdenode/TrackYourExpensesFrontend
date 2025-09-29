@@ -1,7 +1,9 @@
-const API_BASE_URL =  "https://trackyourexpensesbackend.onrender.com"
-
+const API_BASE_URL = process.env.REACT_APP_API_URL||  "https://trackyourexpensesbackend-1.onrender.com"
 class ApiService {
   async request(endpoint, options = {}) {
+    console.log(API_BASE_URL)
+    console.log("the base url is "+API_BASE_URL)
+     console.log(process.env)
     const url = `${API_BASE_URL}${endpoint}`
     const token = localStorage.getItem("token")
     console.log(token);
