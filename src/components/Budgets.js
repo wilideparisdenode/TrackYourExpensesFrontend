@@ -2,9 +2,11 @@
 import { useState, useEffect } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
-
+import { Wallet, CalendarEvent, Trash, PencilSquare, PieChart, ArrowUpRight, ArrowDownRight } from "react-bootstrap-icons";
+import { useSelector } from "react-redux";
+   
+import "./budget.css"
 const Budgets = () => {
-  
   const { user } = useAuth()
   const [budgets, setBudgets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -16,6 +18,9 @@ const Budgets = () => {
     end_date: "",
     income_id: ""
   })
+  const preferences=useSelector((state)=>state.preferences);
+  const color=useSelector((state)=>state.mode.theme);
+ 
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [incomes, setIncomes] = useState([])
@@ -31,7 +36,6 @@ const Budgets = () => {
       setLoading(true)
       const data = await apiService.get(`/budget/${user._id}`)
       setBudgets(data.data)
-      
     } catch (error) {
       setError("Failed to load budgets")
       console.error("Error loading budgets:", error)
@@ -49,16 +53,15 @@ const Budgets = () => {
     }
   }
 
-  // Budgets.js
-const trackBudget = async (budget) => {
-  try {
-    const data = await apiService.get(`/budget/view/${user._id}/${budget.income_id}`);
-    setTrackingData(data);
-  } catch (error) {
-    setError("Failed to track budget: " + (error.response?.data?.message || error.message));
-    console.error("Error details:", error);
+  const trackBudget = async (budget) => {
+    try {
+      const data = await apiService.get(`/budget/view/${user._id}/${budget.income_id}`)
+      setTrackingData(data)
+    } catch (error) {
+      setError("Failed to track budget: " + (error.response?.data?.message || error.message))
+      console.error("Error details:", error)
+    }
   }
-};
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -124,6 +127,20 @@ const trackBudget = async (budget) => {
     setTrackingData(null)
   }
 
+  // Calculate budget statistics
+  const getBudgetStats = () => {
+    const totalBudget = budgets.reduce((sum, budget) => sum + parseFloat(budget.amount), 0);
+    const activeBudgets = budgets.filter(budget => new Date(budget.end_date) > new Date()).length;
+    const endingSoon = budgets.filter(budget => {
+      const daysLeft = Math.ceil((new Date(budget.end_date) - new Date()) / (1000 * 60 * 60 * 24));
+      return daysLeft <= 7 && daysLeft > 0;
+    }).length;
+
+    return { totalBudget, activeBudgets, endingSoon };
+  };
+
+  const stats = getBudgetStats();
+
   if (loading) {
     return (
       <div className="loading-screen">
@@ -134,99 +151,165 @@ const trackBudget = async (budget) => {
   }
 
   return (
-    <div className="budgets">
+    <div className={`budgets ${color}` }>
       <div className="page-header">
-        <h1 className="page-title">Budgets</h1>
-        <button className="btn btn-primary" onClick={() => openModal()}>
-          + Create Budget
+        <div className="header-content">
+          <h1 className="page-title">Budget Management</h1>
+          <p className="page-subtitle">Track and manage your financial plans</p>
+        </div>
+        <button className="btn btn-create" onClick={() => openModal()}>
+          <span>+ Create Budget</span>
         </button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
+      {error && (
+        <div className="alert alert-error">
+          <button onClick={() => setError("")} className="close-btn">×</button>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="alert alert-success">
+          <button onClick={() => setSuccess("")} className="close-btn">×</button>
+          {success}
+        </div>
+      )}
 
-      <div className="card">
-        {budgets.length > 0 ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>End Date</th>
-                <th>Income Source</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {budgets.map((budget) => (
-                <tr key={budget.id}>
-                  <td>{budget.description}</td>
-                  <td>${budget.amount}</td>
-                  <td>{new Date(budget.end_date).toLocaleDateString()}</td>
-                  <td>
-                    {incomes.find(i => i._id === budget.income_id)?.source || 'N/A'}
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button 
-                        className="btn btn-info btn-sm" 
-                        onClick={() => trackBudget(budget)}
-                      >
-                        Track
-                      </button>
-                      <button 
-                        className="btn btn-edit btn-sm" 
-                        onClick={() => openModal(budget)}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="btn btn-delete btn-sm" 
-                        onClick={() => handleDelete(budget._id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="no-data">
-            <p>No budgets found. Create your first budget to get started!</p>
+      {/* Stats Overview */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon total-budget">
+            <Wallet size={24} />
           </div>
-        )}
+          <div className="stat-content">
+            <h3>{preferences.symbol}{stats.totalBudget.toFixed(2)}</h3>
+            <p>Total Budget</p>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon active-budgets">
+            <PieChart size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>{stats.activeBudgets}</h3>
+            <p>Active Budgets</p>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon ending-soon">
+            <CalendarEvent size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>{stats.endingSoon}</h3>
+            <p>Ending Soon</p>
+          </div>
+        </div>
       </div>
 
-      {/* Budget Tracking Modal */}
+      {/* Budget Cards with Progress Bars */}
+      <div className="budgets-section">
+        <h2 className="section-title">Your Budgets</h2>
+        <div className="budgets-grid">
+          {budgets.length > 0 ? (
+            budgets.map((budget) => {
+              const incomeSource = incomes.find(i => i._id === budget.income_id)?.source || 'Not linked';
+              const daysLeft = Math.ceil((new Date(budget.end_date) - new Date()) / (1000 * 60 * 60 * 24));
+              const isExpired = daysLeft < 0;
+              
+              return (
+                <div key={budget._id} className="budget-card">
+                  <div className="budget-card-header">
+                    <div className="budget-title">
+                      <h3>{budget.description}</h3>
+                      <span className={`status-badge ${isExpired ? 'expired' : daysLeft <= 7 ? 'ending' : 'active'}`}>
+                        {isExpired ? 'Expired' : daysLeft <= 7 ? 'Ending' : 'Active'}
+                      </span>
+                    </div>
+                    <div className="budget-amount">{preferences.symbol}{parseFloat(budget.amount).toFixed(2)}</div>
+                  </div>
+
+                  <div className="budget-details">
+                    <div className="detail-item">
+                      <CalendarEvent size={14} />
+                      <span>Ends: {new Date(budget.end_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="detail-item">
+                      <Wallet size={14} />
+                      <span>Source: {incomeSource}</span>
+                    </div>
+                    <div className="detail-item">
+                      {isExpired ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                      <span>{isExpired ? 'Expired' : `${daysLeft} days left`}</span>
+                    </div>
+                  </div>
+
+                  <div className="budget-actions">
+                    <button 
+                      className="btn-action track" 
+                      onClick={() => trackBudget(budget)}
+                      title="Track Budget"
+                    >
+                      <PieChart size={16} />
+                    </button>
+                    <button 
+                      className="btn-action edit" 
+                      onClick={() => openModal(budget)}
+                      title="Edit Budget"
+                    >
+                      <PencilSquare size={16} />
+                    </button>
+                    <button 
+                      className="btn-action delete" 
+                      onClick={() => handleDelete(budget._id)}
+                      title="Delete Budget"
+                    >
+                      <Trash size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="no-budgets">
+              <div className="no-budgets-content">
+                <Wallet size={48} />
+                <h3>No Budgets Yet</h3>
+                <p>Create your first budget to start tracking your finances</p>
+                <button className="btn btn-create" onClick={() => openModal()}>
+                  Create Budget
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tracking Modal */}
       {trackingData && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content tracking-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Budget Tracking</h2>
-              <button className="close-btn" onClick={closeModal}>
-                ×
-              </button>
+              <h2>Budget Tracking</h2>
+              <button className="close-btn" onClick={closeModal}>×</button>
             </div>
             <div className="tracking-results">
               <div className="tracking-item">
                 <span>Budget Amount:</span>
-                <span>${trackingData.budget}</span>
+                <span className="amount">{preferences.symbol}{trackingData.budget}</span>
               </div>
               <div className="tracking-item">
                 <span>Total Spending:</span>
-                <span>${trackingData.totalSpending}</span>
+                <span className="amount spent">{preferences.symbol}{trackingData.totalSpending}</span>
               </div>
               <div className="tracking-item">
                 <span>Remaining Budget:</span>
-                <span className={
-                  trackingData.remainingBudget >= 0 ? "text-success" : "text-danger"
-                }>
-                  ${trackingData.remainingBudget}
+                <span className={`amount ${trackingData.remainingBudget >= 0 ? "remaining" : "over-budget"}`}>
+                 {preferences.symbol}{trackingData.remainingBudget}
                 </span>
               </div>
-              <div className="tracking-status">
+              <div className={`status-display ${trackingData.status.toLowerCase()}`}>
                 Status: <strong>{trackingData.status}</strong>
               </div>
             </div>
@@ -234,36 +317,33 @@ const trackBudget = async (budget) => {
         </div>
       )}
 
-      {/* Budget Create/Edit Modal */}
+      {/* Create/Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">{editingBudget ? "Edit Budget" : "Create Budget"}</h2>
-              <button className="close-btn" onClick={closeModal}>
-                ×
-              </button>
+              <h2>{editingBudget ? "Edit Budget" : "Create New Budget"}</h2>
+              <button className="close-btn" onClick={closeModal}>×</button>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Description</label>
+                <label>Budget Description*</label>
                 <input
                   type="text"
-                  className="form-control"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
-                  placeholder="Budget description"
+                  placeholder="e.g., Monthly Groceries, Entertainment"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Amount</label>
+                <label>Amount*</label>
                 <input
                   type="number"
                   step="0.01"
-                  className="form-control"
+                  min="0"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
@@ -272,10 +352,9 @@ const trackBudget = async (budget) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">End Date</label>
+                <label>End Date*</label>
                 <input
                   type="date"
-                  className="form-control"
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                   required
@@ -283,27 +362,25 @@ const trackBudget = async (budget) => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Income Source</label>
+                <label>Income Source</label>
                 <select
-                  className="form-control"
                   value={formData.income_id}
                   onChange={(e) => setFormData({ ...formData, income_id: e.target.value })}
-                  required
                 >
                   <option value="">Select Income Source</option>
-                  {incomes.map(income => (
+                  {incomes.map((income) => (
                     <option key={income._id} value={income._id}>
-                      {income.source} (${income.amount})
+                      {income.source} ({preferences.symbol}{income.amount})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                <button type="button" className="btn btn-cancel" onClick={closeModal}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-save">
                   {editingBudget ? "Update Budget" : "Create Budget"}
                 </button>
               </div>
@@ -312,102 +389,7 @@ const trackBudget = async (budget) => {
         </div>
       )}
 
-      <style jsx>{`
-        .budgets {
-          background: #0a192f;
-          color: #f0f4f8;
-          min-height: 100vh;
-        }
-
-        .budgets-table, .budgets-table th, .budgets-table td {
-          background: #112d4e !important;
-          color: #f0f4f8 !important;
-          border-color: #3a7ca5 !important;
-        }
-
-        .summary-card, .page-header, .modal-content {
-          background: #112d4e;
-          color: #f0f4f8;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(10,25,47,0.2);
-        }
-
-        .btn-primary {
-          background: #3a7ca5;
-          color: #f0f4f8;
-        }
-
-        .btn-primary:hover {
-          background: #1e3a5c;
-        }
-
-        input, select {
-          background: #0a192f;
-          color: #f0f4f8;
-          border: 1px solid #3a7ca5;
-          border-radius: 4px;
-          padding: 0.5em;
-        }
-
-        input:focus, select:focus {
-          outline: 2px solid #3a7ca5;
-        }
-
-        .form-group label {
-          color: #f0f4f8;
-        }
-        
-        .capitalize {
-          text-transform: capitalize;
-        }
-        
-        .text-danger {
-          color: #dc3545;
-        }
-        
-        .text-success {
-          color: #28a745;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-        }
-        
-        .form-actions {
-          display: flex;
-          gap: 10px;
-          justify-content: flex-end;
-          margin-top: 20px;
-        }
-        
-        .no-data {
-          text-align: center;
-          padding: 40px 20px;
-          color: #666;
-        }
-        
-        .tracking-results {
-          padding: 20px;
-        }
-        
-        .tracking-item {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 10px;
-          padding: 8px 0;
-          border-bottom: 1px solid #eee;
-        }
-        
-        .tracking-status {
-          margin-top: 20px;
-          padding: 10px;
-          background: #f8f9fa;
-          border-radius: 4px;
-          text-align: center;
-          font-size: 1.1em;
-        }
-      `}</style>
+      
     </div>
   )
 }

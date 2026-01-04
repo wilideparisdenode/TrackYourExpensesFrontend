@@ -8,12 +8,13 @@ import {
   GraphUp,
   PeopleFill,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,Gear
 } from "react-bootstrap-icons";
 import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const menuItems = [
+     { path: "/settings", label: "settings", icon: <Gear className="sidebar-icon" /> },
     { path: "/dashboard", label: "Dashboard", icon: <BarChartFill className="sidebar-icon" /> },
     { path: "/budgets", label: "Budgets", icon: <WalletFill className="sidebar-icon" /> },
     { path: "/expenses", label: "Expenses", icon: <CurrencyExchange className="sidebar-icon" /> },

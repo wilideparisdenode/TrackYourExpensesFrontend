@@ -1,7 +1,8 @@
 "use client"
 import { useAuth } from "../context/AuthContext"
-import { List } from "react-bootstrap-icons"
+import { List ,PersonFill} from "react-bootstrap-icons"
 import "./Header.css"
+
 
 const Header = ({ toggleSidebar }) => {
   const { user, logout } = useAuth()
@@ -21,7 +22,9 @@ const Header = ({ toggleSidebar }) => {
         </div>
         <div className="header-right">
           <div className="user-info">
-            <span className="user-avatar">👤</span>
+            <span className="user-avatar"> 
+            {user.profileImage ? <img alt="profile-image" src={user.profileImage}></img>:<PersonFill/>}  
+            </span>
             <span className="user-name">{user?.name}</span>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={logout}>

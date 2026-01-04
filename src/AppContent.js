@@ -6,7 +6,7 @@ import { useAuth } from "./context/AuthContext";
 import "./App.css";
 
 // Components
-import ExpenseCategories from "./components/ExpenseCategories";
+import AdminRoute from "./services/AdminRoute";
 
 // import ChatToggleButton from './ChatToggleButton';
 import Signup from "./components/Signup";
@@ -20,8 +20,7 @@ import Reports from "./components/Reports";
 import Users from "./components/Users";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import BotpressChat from "./components/BotpressChat";
-
+import Settings from "./pages/Settings";
 export default function AppContent() {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -53,8 +52,7 @@ export default function AppContent() {
   // Logged in: Show app layout
   return (
     <div className="app-container">
-          <BotpressChat/>
-         
+      
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       <main className={`main-content ${sidebarOpen ? "expanded" : ""}`}>
         <Header toggleSidebar={toggleSidebar} />
@@ -62,14 +60,19 @@ export default function AppContent() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* <Route path="/expense_category" element={<ExpenseCategories />} /> */}
+            <Route path="/settings" element={   <Settings/>} />
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/income" element={<Income />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/users" element={<Users />} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
+
+
+            {/* this is the protected route  */}
+             <Route element={<AdminRoute />}>
+                      <Route path="/users" element={<Users />} />          
+             </Route>
           </Routes>
         </div>
       </main>

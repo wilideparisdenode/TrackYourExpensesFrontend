@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './ExpenseCategories.css';
-
+import { useSelector } from "react-redux";
 const ExpenseCategories = () => {
+  const preferences=useSelector((state)=>state.preferences)
+
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });

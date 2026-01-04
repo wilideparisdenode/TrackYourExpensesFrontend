@@ -30,7 +30,7 @@ const Login = () => {
     const result = await login(formData)
 
     if (!result.success) {
-      setError(result.error)
+      setError("password , or email is incorrect")
     }
 
     setLoading(false)

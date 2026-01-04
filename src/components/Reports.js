@@ -3,9 +3,24 @@
 import { useState, useEffect } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
+import { useSelector } from "react-redux";
+// ✅ Corrected imports
+import { 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  CurrencyDollar, 
+  PieChart, 
+  Download, 
+  Calendar, 
+  Bullseye, 
+  ExclamationTriangle 
+} from "react-bootstrap-icons"
+
 import "./Report.css"
 
 const Reports = () => {
+   const preferences=useSelector((state)=>state.preferences)
+
   const { user } = useAuth()
   const [reportData, setReportData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -13,14 +28,15 @@ const Reports = () => {
   const [budgets, setBudgets] = useState([])
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [timeRange, setTimeRange] = useState("monthly")
 
-  // Load available budgets for the user
+  // Load available budgets
   useEffect(() => {
     const loadBudgets = async () => {
       try {
         setLoading(true)
         const response = await apiService.viewBudgets(user._id)
-        
+
         if (Array.isArray(response)) {
           setBudgets(response)
         } else if (response?.data) {
@@ -35,7 +51,7 @@ const Reports = () => {
         setLoading(false)
       }
     }
-    
+
     if (user?._id) {
       loadBudgets()
     }
@@ -47,22 +63,25 @@ const Reports = () => {
       setError("")
       setSuccess("")
       setReportData(null)
-      
-      if (!budget_id) {
-        throw new Error("Please select a budget")
-      }
+
+      if (!budget_id) throw new Error("Please select a budget")
 
       const response = await apiService.post("/report/createReport", {
         user_id: user._id,
         budget_id
       })
-      console.log(response)
 
       if (response?.success === false) {
         throw new Error(response.error || "Failed to generate report")
       }
 
-      setReportData(response.data)
+      const enhancedData = {
+        ...response.data,
+        insights: generateInsights(response.data),
+        recommendations: generateRecommendations(response.data)
+      }
+
+      setReportData(enhancedData)
       setSuccess("Report generated successfully!")
     } catch (error) {
       setError(error.message || "Failed to generate report")
@@ -72,16 +91,82 @@ const Reports = () => {
     }
   }
 
+  const generateInsights = (data) => {
+    const totalIncome = parseFloat(data.total_income || 0)
+    const totalExpenses = parseFloat(data.total_expenses || 0)
+    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome * 100) : 0
+    const expenseToIncomeRatio = totalIncome > 0 ? (totalExpenses / totalIncome * 100) : 0
+
+    return {
+      savingsRate: Math.max(0, savingsRate),
+      expenseToIncomeRatio,
+      isHealthy: savingsRate >= 20,
+      spendingTrend: totalExpenses > totalIncome ? 'over' : 'under',
+      riskLevel: savingsRate < 10 ? 'high' : savingsRate < 20 ? 'medium' : 'low'
+    }
+  }
+
+  const generateRecommendations = (data) => {
+    const insights = generateInsights(data)
+    const recs = []
+
+    if (insights.savingsRate < 10) {
+      recs.push({
+        type: 'warning',
+        message: 'Your savings rate is very low. Consider reducing discretionary spending.',
+        icon: ExclamationTriangle
+      })
+    }
+
+    if (insights.spendingTrend === 'over') {
+      recs.push({
+        type: 'critical',
+        message: 'You are spending more than you earn. Review your expenses immediately.',
+        icon: ArrowDownRight
+      })
+    }
+
+    if (insights.savingsRate >= 20) {
+      recs.push({
+        type: 'success',
+        message: 'Excellent savings rate! Consider investing your surplus.',
+        icon: ArrowUpRight
+      })
+    }
+
+    if (parseFloat(data.total_expenses || 0) > parseFloat(data.total_income || 0) * 0.8) {
+      recs.push({
+        type: 'warning',
+        message: 'Over 80% of income goes to expenses. Look for cost-saving opportunities.',
+        icon: PieChart
+      })
+    }
+
+    return recs
+  }
+
   const exportReport = () => {
     if (!reportData) return
 
     const csvContent = [
-      ["Budget Report", ""],
-      ["Start Date", reportData.start_date],
-      ["End Date", reportData.end_date],
-      ["Total Income", reportData.total_income],
-      ["Total Expenses", reportData.total_expenses],
-      ["Balance", reportData.balance]
+      ["Financial Report", "", "", ""],
+      ["Generated on", new Date().toLocaleDateString(), "", ""],
+      ["", "", "", ""],
+      ["SUMMARY", "", "", ""],
+      ["Start Date", reportData.start_date, "", ""],
+      ["End Date", reportData.end_date, "", ""],
+      ["Total Income", `${reportData.total_income} CFA`, "", ""],
+      ["Total Expenses", `${reportData.total_expenses} CFA`, "", ""],
+      ["Net Balance", `${reportData.balance} CFA`, "", ""],
+      ["", "", "", ""],
+      ["INSIGHTS", "", "", ""],
+      ["Savings Rate", `${reportData.insights.savingsRate.toFixed(1)}%`, "", ""],
+      ["Expense Ratio", `${reportData.insights.expenseToIncomeRatio.toFixed(1)}%`, "", ""],
+      ["Health", reportData.insights.isHealthy ? "Healthy" : "Needs Attention", "", ""],
+      ["Risk Level", reportData.insights.riskLevel.toUpperCase(), "", ""],
+      ["", "", "", ""],
+      ["RECOMMENDATIONS", "", "", ""],
+      ...reportData.recommendations.map(rec => [rec.type.toUpperCase(), rec.message, "", ""])
     ]
     .map(row => row.join(","))
     .join("\n")
@@ -90,125 +175,110 @@ const Reports = () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `budget-report-${budget_id}-${new Date().toISOString().split("T")[0]}.csv`
+    link.download = `financial-report-${new Date().toISOString().split("T")[0]}.csv`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
+  const getHealthColor = (risk) => {
+    switch (risk) {
+      case 'low': return '#10b981'
+      case 'medium': return '#f59e0b'
+      case 'high': return '#ef4444'
+      default: return '#6b7280'
+    }
+  }
+
   return (
     <div className="reports">
       <div className="page-header">
-        <h1 className="page-title">Budget Reports</h1>
+        <div className="header-content">
+          <h1 className="page-title">Financial Insights</h1>
+          <p className="page-subtitle">Deep analysis of your financial health and spending patterns</p>
+        </div>
       </div>
 
-      {error && (
-        <div className="alert alert-error">
-          <button onClick={() => setError("")} className="close-btn">×</button>
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
 
-      {success && (
-        <div className="alert alert-success">
-          <button onClick={() => setSuccess("")} className="close-btn">×</button>
-          {success}
-        </div>
-      )}
-
-      <div className="card">
-        <div className="card-header">Generate Budget Report</div>
-        <div className="report-config">
-          <div className="form-group">
-            <label className="form-label">Select Budget</label>
-            <select 
-              className="form-control" 
-              value={budget_id} 
-              onChange={(e) => setBudgetId(e.target.value)}
-              disabled={loading}
-              required
-            >
-              <option value="">Select a Budget</option>
-              {budgets.length === 0 && !loading && (
-                <option value="" disabled>No budgets available</option>
-              )}
-              {budgets.map(budget => (
-                <option key={budget._id} value={budget._id}>
-                  {budget.description} (${budget.amount})
-                </option>
-              ))}
-            </select>
+      {/* Config */}
+      <div className="config-section">
+        <div className="config-card">
+          <div className="config-header">
+            <h3><Bullseye size={20} /> Generate Report</h3>
+            <p>Select a budget to analyze your financial performance</p>
           </div>
+          
+          <div className="config-controls">
+            <div className="form-group">
+              <label>Select Budget</label>
+              <select value={budget_id} onChange={(e) => setBudgetId(e.target.value)}>
+                <option value="">Choose a budget...</option>
+                {budgets.map(budget => (
+                  <option key={budget._id} value={budget._id}>
+                    {budget.description} ({budget.amount}{preferences.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <button 
-            className="btn btn-primary" 
-            onClick={generateReport} 
-            disabled={loading || !budget_id}
-          >
-            {loading ? "Generating..." : "Generate Report"}
-          </button>
+            <div className="form-group">
+              <label>Analysis Period</label>
+              <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            <button className="btn btn-generate" onClick={generateReport}>
+              {loading ? "Analyzing..." : <><PieChart size={16}/> Generate Insights</>}
+            </button>
+          </div>
         </div>
       </div>
 
       {reportData && (
-        <div className="report-results">
-          <div className="card">
-            <div className="card-header">
-              <span>Budget Report Summary</span>
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={exportReport}
-                disabled={loading}
-              >
-                Export CSV
-              </button>
+        <div className="insights-dashboard">
+          {/* Overview */}
+          <div className="overview-grid">
+            <div className="overview-card income-card">
+              <ArrowUpRight size={24}/>
+              <h3>Total Income</h3>
+              <div>{reportData.total_income}{preferences.symbol}</div>
             </div>
-
-            <div className="report-summary">
-              <div className="summary-grid">
-                <div className="summary-item">
-                  <span className="summary-label">Start Date</span>
-                  <span className="summary-value">
-                    {new Date(reportData.start_date).toLocaleDateString()}
-                  </span>
-                </div>
-
-                <div className="summary-item">
-                  <span className="summary-label">End Date</span>
-                  <span className="summary-value">
-                    {new Date(reportData.end_date).toLocaleDateString()}
-                  </span>
-                </div>
-
-                <div className="summary-item">
-                  <span className="summary-label">Total Income</span>
-                  <span className="summary-value income-amount">
-                    ${parseFloat(reportData.total_income || 0).toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="summary-item">
-                  <span className="summary-label">Total Expenses</span>
-                  <span className="summary-value expense-amount">
-                    ${parseFloat(reportData.total_expenses || 0).toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="summary-item">
-                  <span className="summary-label">Balance</span>
-                  <span
-                    className={`summary-value ${
-                      parseFloat(reportData.balance || 0) >= 0 
-                        ? "income-amount" 
-                        : "expense-amount"
-                    }`}
-                  >
-                    ${parseFloat(reportData.balance || 0).toFixed(2)}
-                  </span>
-                </div>
-              </div>
+            <div className="overview-card expense-card">
+              <ArrowDownRight size={24}/>
+              <h3>Total Expenses</h3>
+              <div>{reportData.total_expenses}{preferences.symbol}</div>
             </div>
+            <div className="overview-card balance-card">
+              <CurrencyDollar size={24}/>
+              <h3>Net Balance</h3>
+              <div>{reportData.balance}{preferences.symbol}</div>
+            </div>
+            <div className="overview-card savings-card">
+              <PieChart size={24}/>
+              <h3>Savings Rate</h3>
+              <div>{reportData.insights.savingsRate.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          {/* Recommendations */}
+          <div className="recommendations-card">
+            <h3>Recommendations</h3>
+            {reportData.recommendations.map((rec, i) => {
+              const Icon = rec.icon
+              return <div key={i}><Icon size={16}/> {rec.message}</div>
+            })}
+          </div>
+
+          {/* Export */}
+          <div className="action-card">
+            <button onClick={exportReport}><Download size={16}/> Export Report</button>
           </div>
         </div>
       )}

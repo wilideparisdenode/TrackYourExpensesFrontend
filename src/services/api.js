@@ -1,41 +1,61 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL||  "https://trackyourexpensesbackend-1.onrender.com"
-class ApiService {
-  async request(endpoint, options = {}) {
-    console.log(API_BASE_URL)
-    console.log("the base url is "+API_BASE_URL)
-     console.log(process.env)
-    const url = `${API_BASE_URL}${endpoint}`
-    const token = localStorage.getItem("token")
-    console.log(token);
+const API_BASE_URL = process.env.REACT_APP_API_URL|| "https://trackyourexpensesbackend.onrender.com"
 
+class ApiService {
+  // ✅ Generic request method
+  async request(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`
+     console.log("ENV:", process.env);
+console.log("API URL:", process.env.REACT_APP_API_URL);
+
+    // Retrieve token from localStorage (optional)
+    const token = localStorage.getItem("token") || null
+
+    // Build request configuration
     const config = {
+      method: options.method || "GET",
       headers: {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
+        ...(options.headers || {}),
       },
       ...options,
     }
 
+    // Convert JS object to JSON string if needed
     if (config.body && typeof config.body === "object") {
       config.body = JSON.stringify(config.body)
     }
 
     try {
       const response = await fetch(url, config)
+      console.log("Response:", response)
 
+      // Handle non-OK responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        let errorData = {}
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { message: "Unknown error occurred" }
+        }
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
       }
 
-      return await response.json()
+      // Try to parse JSON response safely
+      try {
+        return await response.json()
+      } catch {
+        return null // In case the response is empty (204 No Content)
+      }
     } catch (error) {
-      console.error("API request failed:", error)
+      console.error("API request failed:", error.message)
       throw error
     }
   }
 
-  // Auth
+  // ========================
+  // 🔐 AUTH ENDPOINTS
+  // ========================
   async login(credentials) {
     return this.request("/login", {
       method: "POST",
@@ -50,16 +70,30 @@ class ApiService {
     })
   }
 
-  // Users
+  async changePass(credentials) {
+    return this.request("/edit-pass", {
+      method: "PUT",
+      body: credentials,
+    })
+  }
+
+  async changeInfo(credentials) {
+    return this.request("/edit-info", {
+      method: "PUT",
+      body: credentials,
+    })
+  }
+
+  // ========================
+  // 👥 USER MANAGEMENT
+  // ========================
   async getUsers() {
     return this.request("/user")
   }
 
-  // // Budgets
-  // async getBudgets(id) {
-  //   return this.request(`/budget/${id}`)
-  // }
-
+  // ========================
+  // 💰 BUDGET ENDPOINTS
+  // ========================
   async createBudget(budgetData) {
     return this.request("/budget/create_budget", {
       method: "POST",
@@ -81,7 +115,9 @@ class ApiService {
     return this.request(`/budget/${userId}`)
   }
 
-  // Expenses
+  // ========================
+  // 💸 EXPENSE ENDPOINTS
+  // ========================
   async addExpense(expenseData) {
     return this.request("/expense/add", {
       method: "POST",
@@ -106,20 +142,24 @@ class ApiService {
     })
   }
 
-  // Income
+  // ========================
+  // 💵 INCOME ENDPOINTS
+  // ========================
   async addIncome(incomeData) {
     return this.request("/income/add", {
       method: "POST",
       body: incomeData,
     })
   }
-  async editIncome(incomeData,id) {
-    console.log(incomeData,id)
+
+  async editIncome(incomeData, id) {
+    console.log("Editing income:", incomeData, id)
     return this.request(`/income/${id}`, {
       method: "PUT",
       body: incomeData,
     })
   }
+
   async getIncomeByUserId(userId) {
     return this.request(`/income/user/${userId}`)
   }
@@ -137,12 +177,9 @@ class ApiService {
     })
   }
 
-  // // Categories (if still needed)
-  // async getCategories() {
-  //   return this.request("/category")
-  // }
-
-  // Generic methods for flexibility
+  // ========================
+  // 🌐 GENERIC HTTP METHODS
+  // ========================
   async get(endpoint) {
     return this.request(endpoint)
   }

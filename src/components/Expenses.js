@@ -4,7 +4,11 @@ import { useState, useEffect } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import "./Expenses.css"
+import { useSelector } from "react-redux";
+
 const Expenses = () => {
+   const preferences=useSelector((state)=>state.preferences)
+
   const { user } = useAuth();
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -217,7 +221,37 @@ const Expenses = () => {
 
   const isLoading = loading.expenses || loading.budgets || loading.categories;
   const totalExpenses = expenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0);
+const getCategoryChartData = () => {
+    const categoryTotals = {};
+    
+    expenses.forEach(expense => {
+      const category = categories.find(c => c._id === expense.category_id);
+      const categoryName = category?.name || 'Uncategorized';
+      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + parseFloat(expense.amount);
+    });
 
+    return Object.entries(categoryTotals).map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: ((amount / totalExpenses) * 100).toFixed(1)
+    }));
+  };
+
+  const getBudgetChartData = () => {
+    const budgetTotals = {};
+    
+    expenses.forEach(expense => {
+      const budget = budgets.find(b => b._id === expense.budget_id);
+      const budgetName = budget?.description || 'No Budget';
+      budgetTotals[budgetName] = (budgetTotals[budgetName] || 0) + parseFloat(expense.amount);
+    });
+
+    return Object.entries(budgetTotals).map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: ((amount / totalExpenses) * 100).toFixed(1)
+    }));
+  };
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -257,7 +291,7 @@ const Expenses = () => {
         <div className="stat-item">
           <span className="stat-label">Total Expenses</span>
           <span className="stat-value expense-amount">
-            ${totalExpenses.toFixed(2)}
+            {preferences.symbol}{totalExpenses.toFixed(2)}
           </span>
         </div>
         <div className="stat-item">
@@ -266,55 +300,101 @@ const Expenses = () => {
         </div>
       </div>
 
-      <div className="expenses-table-container">
+      {/* Charts Section */}
+      <div className="charts-container">
+        <div className="chart-card">
+          <h3>Expenses by Category</h3>
+          <div className="chart-bars">
+            {getCategoryChartData().map((item, index) => (
+              <div key={index} className="chart-bar-item">
+                <div className="bar-label">
+                  <span>{item.name}</span>
+                  <span>{preferences.symbol}{item.amount.toFixed(2)} ({item.percentage}%)</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill"
+                    style={{ width: `${item.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Expenses by Budget</h3>
+          <div className="chart-bars">
+            {getBudgetChartData().map((item, index) => (
+              <div key={index} className="chart-bar-item">
+                <div className="bar-label">
+                  <span>{item.name}</span>
+                  <span>{preferences.symbol}{item.amount.toFixed(2)} ({item.percentage}%)</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill"
+                    style={{ width: `${item.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Expenses Cards */}
+      <div className="expenses-cards-container">
         {expenses.length > 0 ? (
-          <table className="expenses-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Budget</th>
-                <th>Amount</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((expense) => {
-                const budget = budgets.find(b => b._id === expense.budget_id);
-                const category = categories.find(c => c._id === expense.category_id);
-                return (
-                  <tr key={expense._id}>
-                    <td>{new Date(expense.date).toLocaleDateString()}</td>
-                    <td>{expense.description}</td>
-                    <td>{category?.name || 'Uncategorized'}</td>
-                    <td>{budget?.description || 'No Budget'}</td>
-                    <td className="expense-amount">
-                      ${parseFloat(expense.amount).toFixed(2)}
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button 
-                          className="btn btn-edit btn-sm" 
-                          onClick={() => openModal(expense)}
-                          disabled={loading.submitting}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="btn btn-delete btn-sm" 
-                          onClick={() => handleDelete(expense._id)}
-                          disabled={loading.submitting}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="expenses-grid">
+            {expenses.map((expense) => {
+              const budget = budgets.find(b => b._id === expense.budget_id);
+              const category = categories.find(c => c._id === expense.category_id);
+              
+              return (
+                <div key={expense._id} className="expense-card">
+                  <div className="expense-card-header">
+                    <h3>{expense.description}</h3>
+                    <span className="expense-amount">
+                      {preferences.symbol}{parseFloat(expense.amount).toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  <div className="expense-card-details">
+                    <div className="expense-detail">
+                      <span className="detail-label">Date:</span>
+                      <span>{new Date(expense.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="expense-detail">
+                      <span className="detail-label">Category:</span>
+                      <span>{category?.name || 'Uncategorized'}</span>
+                    </div>
+                    <div className="expense-detail">
+                      <span className="detail-label">Budget:</span>
+                      <span>{budget?.description || 'No Budget'}</span>
+                    </div>
+                  </div>
+
+                  <div className="expense-card-actions">
+                    <button 
+                      className="btn btn-edit btn-sm" 
+                      onClick={() => openModal(expense)}
+                      disabled={loading.submitting}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="btn btn-delete btn-sm" 
+                      onClick={() => handleDelete(expense._id)}
+                      disabled={loading.submitting}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="no-expenses">
             <p>No expenses found. Add your first expense to get started!</p>
@@ -390,7 +470,7 @@ const Expenses = () => {
                   <option value="">No Budget</option>
                   {budgets.map((budget) => (
                     <option key={budget._id} value={budget._id}>
-                      {budget.description} (${budget.amount})
+                      {budget.description} ({preferences.symbol}{budget.amount})
                     </option>
                   ))}
                 </select>
