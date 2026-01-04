@@ -29,7 +29,7 @@ const Budgets = () => {
   useEffect(() => {
     loadBudgets()
     loadIncomes()
-  }, [user])
+  }, [])
 
   const loadBudgets = async () => {
     try {

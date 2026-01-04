@@ -35,7 +35,7 @@ const Expenses = () => {
     if (user?._id) {
       loadInitialData();
     }
-  }, [user]);
+  }, []);
 
   const loadInitialData = async () => {
     try {

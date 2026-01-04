@@ -18,7 +18,6 @@ import {
 } from "react-bootstrap-icons"
 import "./Dashboard.css"
 
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"]
 
 const Dashboard = () => {
   const preferences=useSelector((state)=>state.preferences)
@@ -34,12 +33,12 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [lineData, setLineData] = useState([])
+  // const [lineData, setLineData] = useState([])
   const [pieData, setPieData] = useState([])
 
   useEffect(() => {
     loadDashboardData()
-  }, [user])
+  }, [])
 
   const loadDashboardData = async () => {
     try {
@@ -92,7 +91,7 @@ const Dashboard = () => {
         grouped[d].expense += exp.amount
       })
 
-      setLineData(Object.values(grouped))
+      // setLineData(Object.values(grouped))
 
       const catGrouped = {}
       expenses.forEach((exp) => {
@@ -101,9 +100,9 @@ const Dashboard = () => {
         catGrouped[cat] += exp.amount
       })
 
-      setPieData(
-        Object.entries(catGrouped).map(([name, value]) => ({ name, value }))
-      )
+      // setPieData(
+      //   Object.entries(catGrouped).map(([name, value]) => ({ name, value }))
+      // )
     } catch (error) {
       console.error("Error loading dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")

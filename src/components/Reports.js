@@ -11,7 +11,6 @@ import {
   CurrencyDollar, 
   PieChart, 
   Download, 
-  Calendar, 
   Bullseye, 
   ExclamationTriangle 
 } from "react-bootstrap-icons"
@@ -182,14 +181,14 @@ const Reports = () => {
     URL.revokeObjectURL(url)
   }
 
-  const getHealthColor = (risk) => {
-    switch (risk) {
-      case 'low': return '#10b981'
-      case 'medium': return '#f59e0b'
-      case 'high': return '#ef4444'
-      default: return '#6b7280'
-    }
-  }
+  // const getHealthColor = (risk) => {
+  //   switch (risk) {
+  //     case 'low': return '#10b981'
+  //     case 'medium': return '#f59e0b'
+  //     case 'high': return '#ef4444'
+  //     default: return '#6b7280'
+  //   }
+  // }
 
   return (
     <div className="reports">

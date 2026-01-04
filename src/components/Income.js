@@ -24,7 +24,7 @@ const Income = () => {
 
   useEffect(() => {
     loadIncome()
-  }, [user])
+  }, [])
 
   const loadIncome = async () => {
     try {
