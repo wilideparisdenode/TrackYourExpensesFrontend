@@ -9,7 +9,7 @@ const ExpenseCategories = () => {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });
   const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState('');
+  const [errorz, setError] = useState('');
 
   const apiBase = 'http://localhost:3000/category';
 

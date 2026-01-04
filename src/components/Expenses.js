@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import "./Expenses.css"
 import { useSelector } from "react-redux";
 
 const Expenses = () => {
-   const preferences=useSelector((state)=>state.preferences)
-
   const { user } = useAuth();
+  const preferences = useSelector((state) => state.preferences);
+
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -31,161 +31,122 @@ const Expenses = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    if (user?._id) {
-      loadInitialData();
-    }
-  }, []);
-
-  const loadInitialData = async () => {
-    try {
-      
-        await loadCategories();
-        await loadExpenses();
-        await loadBudgets();
-      
-    } catch (error) {
-      console.error("Detailed loading error:", {
-        message: error.message,
-        stack: error.stack,
-        response: error.response // if using axios or similar
-      });
-      setError("Failed to load initial data. See console for details.");
-    }
-  };
-
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoading(prev => ({ ...prev, categories: true }));
       const response = await apiService.get('/category');
-      if (response) {
-        console.log(response)
-        setCategories(response);
-        
-      } else {
-        throw new Error(response.error || "Failed to load categories");
-      }
-    } catch (error) {
-      console.error("Category loading error:", error);
-      console.log(error)
-
-      setError(error.message);
+      // support multiple response shapes
+      const data = Array.isArray(response) ? response : (response?.data ?? response);
+      setCategories(data || []);
+    } catch (err) {
+      console.error("Category loading error:", err);
+      setError(err?.message || "Failed to load categories");
+      setCategories([]);
     } finally {
       setLoading(prev => ({ ...prev, categories: false }));
     }
-  };
+  }, [user]);
 
-  const loadExpenses = async () => {
+  const loadExpenses = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoading(prev => ({ ...prev, expenses: true }));
       const response = await apiService.getExpensesByUserId(user._id);
-      console.log("Expenses API Response:", response); // 👈 Debug log
-      
-      // If response is an array, use it directly
-      if (Array.isArray(response)) {
-        setExpenses(response);
-      } 
-      // If response is { data: [...] }, use response.data
-      else if (response?.data) {
-        setExpenses(response.data);
-      }
-      // If response is { success, data }, keep existing logic
-      else if (response?.success) {
-        setExpenses(response.data || []);
-      }
-      // Fallback for unexpected responses
-      else {
-        throw new Error("Invalid expenses data format");
-      }
-    } catch (error) {
-      console.error("Expense loading error:", error);
-      setError(error.message);
-      setExpenses([]); // Ensure expenses is never undefined
+      const data = Array.isArray(response) ? response : (response?.data ?? response);
+      setExpenses(data || []);
+    } catch (err) {
+      console.error("Expense loading error:", err);
+      setError(err?.message || "Failed to load expenses");
+      setExpenses([]);
     } finally {
       setLoading(prev => ({ ...prev, expenses: false }));
     }
-  };
+  }, [user]);
 
-  const loadBudgets = async () => {
+  const loadBudgets = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoading(prev => ({ ...prev, budgets: true }));
       const response = await apiService.viewBudgets(user._id);
-      console.log("Budgets API Response:", response); // 👈 Debug log
-      
-      if (Array.isArray(response)) {
-        setBudgets(response);
-      } 
-      else if (response?.data) {
-        setBudgets(response.data);
-      }
-      else if (response?.success) {
-        setBudgets(response.data || []);
-      }
-      else {
-        throw new Error("Invalid budgets data format");
-      }
-    } catch (error) {
-      console.error("Budget loading error:", error);
-      setError(error.message);
-      setBudgets([]); // Ensure budgets is never undefined
+      const data = Array.isArray(response) ? response : (response?.data ?? response);
+      setBudgets(data || []);
+    } catch (err) {
+      console.error("Budget loading error:", err);
+      setError(err?.message || "Failed to load budgets");
+      setBudgets([]);
     } finally {
       setLoading(prev => ({ ...prev, budgets: false }));
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    // load all initial data
+    loadCategories();
+    loadExpenses();
+    loadBudgets();
+  }, [user, loadCategories, loadExpenses, loadBudgets]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user?._id) {
+      setError("User not authenticated");
+      return;
+    }
     try {
       setLoading(prev => ({ ...prev, submitting: true }));
       setError("");
       setSuccess("");
-      
+
       const expenseData = {
         description: formData.description,
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(formData.amount) || 0,
         date: new Date(formData.date).toISOString(),
         category_id: formData.category_id,
-        budget_id: formData.budget_id, // From ,my select input
-        userId: user._id // Check if backend expects 'user_id' or 'userId'
+        budget_id: formData.budget_id,
+        userId: user._id // adjust if backend expects user_id
       };
-      console.log(expenseData)
-      const response = editingExpense 
+
+      const response = editingExpense
         ? await apiService.put(`/expense/${editingExpense._id}`, expenseData)
         : await apiService.post("/expense/add", expenseData);
 
-      if (response.success) {
-        setSuccess(response.message || 
-          (editingExpense ? "Expense updated successfully!" : "Expense added successfully!"));
+      const ok = response?.success ?? (response && !response.error);
+      if (ok) {
+        setSuccess(response?.message || (editingExpense ? "Expense updated successfully!" : "Expense added successfully!"));
         setShowModal(false);
-        await loadExpenses();
         resetForm();
+        await loadExpenses();
       } else {
-        throw new Error(response.error || "Failed to save expense");
+        throw new Error(response?.error || "Failed to save expense");
       }
-    } catch (error) {
-      setError(error.message);
-      console.error("Error saving expense:", error);
+    } catch (err) {
+      console.error("Error saving expense:", err);
+      setError(err?.message || "Failed to save expense");
     } finally {
       setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this expense?")) {
-      try {
-        setLoading(prev => ({ ...prev, submitting: true }));
-        const response = await apiService.delete(`/expense/${id}`);
-        if (response.success) {
-          setSuccess(response.message || "Expense deleted successfully!");
-          await loadExpenses();
-        } else {
-          throw new Error(response.error || "Failed to delete expense");
-        }
-      } catch (error) {
-        setError(error.message);
-        console.error("Error deleting expense:", error);
-      } finally {
-        setLoading(prev => ({ ...prev, submitting: false }));
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to delete this expense?")) return;
+    try {
+      setLoading(prev => ({ ...prev, submitting: true }));
+      const response = await apiService.delete(`/expense/${id}`);
+      const ok = response?.success ?? (response && !response.error);
+      if (ok) {
+        setSuccess(response?.message || "Expense deleted successfully!");
+        await loadExpenses();
+      } else {
+        throw new Error(response?.error || "Failed to delete expense");
       }
+    } catch (err) {
+      console.error("Error deleting expense:", err);
+      setError(err?.message || "Failed to delete expense");
+    } finally {
+      setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
 
@@ -198,6 +159,14 @@ const Expenses = () => {
         date: expense.date ? expense.date.split("T")[0] : new Date().toISOString().split("T")[0],
         budget_id: expense.budget_id || "",
         category_id: expense.category_id || ""
+      });
+    } else {
+      setFormData({
+        description: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        budget_id: "",
+        category_id: ""
       });
     }
     setShowModal(true);
@@ -221,37 +190,35 @@ const Expenses = () => {
 
   const isLoading = loading.expenses || loading.budgets || loading.categories;
   const totalExpenses = expenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0);
-const getCategoryChartData = () => {
-    const categoryTotals = {};
-    
-    expenses.forEach(expense => {
-      const category = categories.find(c => c._id === expense.category_id);
-      const categoryName = category?.name || 'Uncategorized';
-      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + parseFloat(expense.amount);
-    });
 
+  const getCategoryChartData = () => {
+    const categoryTotals = {};
+    expenses.forEach(exp => {
+      const category = categories.find(c => c._id === exp.category_id);
+      const name = category?.name || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + (parseFloat(exp.amount) || 0);
+    });
     return Object.entries(categoryTotals).map(([name, amount]) => ({
       name,
       amount,
-      percentage: ((amount / totalExpenses) * 100).toFixed(1)
+      percentage: totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : "0.0"
     }));
   };
 
   const getBudgetChartData = () => {
     const budgetTotals = {};
-    
-    expenses.forEach(expense => {
-      const budget = budgets.find(b => b._id === expense.budget_id);
-      const budgetName = budget?.description || 'No Budget';
-      budgetTotals[budgetName] = (budgetTotals[budgetName] || 0) + parseFloat(expense.amount);
+    expenses.forEach(exp => {
+      const budget = budgets.find(b => b._id === exp.budget_id);
+      const name = budget?.description || 'No Budget';
+      budgetTotals[name] = (budgetTotals[name] || 0) + (parseFloat(exp.amount) || 0);
     });
-
     return Object.entries(budgetTotals).map(([name, amount]) => ({
       name,
       amount,
-      percentage: ((amount / totalExpenses) * 100).toFixed(1)
+      percentage: totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : "0.0"
     }));
   };
+
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -265,8 +232,8 @@ const getCategoryChartData = () => {
     <div className="expenses">
       <div className="page-header">
         <h1 className="page-title">Expenses</h1>
-        <button 
-          className="btn btn-primary" 
+        <button
+          className="btn btn-primary"
           onClick={() => openModal()}
           disabled={loading.submitting}
         >
@@ -291,7 +258,7 @@ const getCategoryChartData = () => {
         <div className="stat-item">
           <span className="stat-label">Total Expenses</span>
           <span className="stat-value expense-amount">
-            {preferences.symbol}{totalExpenses.toFixed(2)}
+            {preferences?.symbol || ""}{totalExpenses.toFixed(2)}
           </span>
         </div>
         <div className="stat-item">
@@ -309,10 +276,10 @@ const getCategoryChartData = () => {
               <div key={index} className="chart-bar-item">
                 <div className="bar-label">
                   <span>{item.name}</span>
-                  <span>{preferences.symbol}{item.amount.toFixed(2)} ({item.percentage}%)</span>
+                  <span>{preferences?.symbol || ""}{Number(item.amount).toFixed(2)} ({item.percentage}%)</span>
                 </div>
                 <div className="bar-track">
-                  <div 
+                  <div
                     className="bar-fill"
                     style={{ width: `${item.percentage}%` }}
                   ></div>
@@ -329,10 +296,10 @@ const getCategoryChartData = () => {
               <div key={index} className="chart-bar-item">
                 <div className="bar-label">
                   <span>{item.name}</span>
-                  <span>{preferences.symbol}{item.amount.toFixed(2)} ({item.percentage}%)</span>
+                  <span>{preferences?.symbol || ""}{Number(item.amount).toFixed(2)} ({item.percentage}%)</span>
                 </div>
                 <div className="bar-track">
-                  <div 
+                  <div
                     className="bar-fill"
                     style={{ width: `${item.percentage}%` }}
                   ></div>
@@ -350,20 +317,20 @@ const getCategoryChartData = () => {
             {expenses.map((expense) => {
               const budget = budgets.find(b => b._id === expense.budget_id);
               const category = categories.find(c => c._id === expense.category_id);
-              
+
               return (
                 <div key={expense._id} className="expense-card">
                   <div className="expense-card-header">
                     <h3>{expense.description}</h3>
                     <span className="expense-amount">
-                      {preferences.symbol}{parseFloat(expense.amount).toFixed(2)}
+                      {preferences?.symbol || ""}{(parseFloat(expense.amount) || 0).toFixed(2)}
                     </span>
                   </div>
-                  
+
                   <div className="expense-card-details">
                     <div className="expense-detail">
                       <span className="detail-label">Date:</span>
-                      <span>{new Date(expense.date).toLocaleDateString()}</span>
+                      <span>{expense.date ? new Date(expense.date).toLocaleDateString() : 'N/A'}</span>
                     </div>
                     <div className="expense-detail">
                       <span className="detail-label">Category:</span>
@@ -376,15 +343,15 @@ const getCategoryChartData = () => {
                   </div>
 
                   <div className="expense-card-actions">
-                    <button 
-                      className="btn btn-edit btn-sm" 
+                    <button
+                      className="btn btn-edit btn-sm"
                       onClick={() => openModal(expense)}
                       disabled={loading.submitting}
                     >
                       Edit
                     </button>
-                    <button 
-                      className="btn btn-delete btn-sm" 
+                    <button
+                      className="btn btn-delete btn-sm"
                       onClick={() => handleDelete(expense._id)}
                       disabled={loading.submitting}
                     >
@@ -470,34 +437,31 @@ const getCategoryChartData = () => {
                   <option value="">No Budget</option>
                   {budgets.map((budget) => (
                     <option key={budget._id} value={budget._id}>
-                      {budget.description} ({preferences.symbol}{budget.amount})
+                      {budget.description} ({preferences?.symbol || ""}{budget.amount})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-actions">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={closeModal}
                   disabled={loading.submitting}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={loading.submitting}
                 >
-                  {loading.submitting ? "Processing..." : 
-                   (editingExpense ? "Update Expense" : "Add Expense")}
+                  {loading.submitting ? "Processing..." : (editingExpense ? "Update Expense" : "Add Expense")}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      
     </div>
   );
 };

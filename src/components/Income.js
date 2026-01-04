@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import { useSelector } from "react-redux";
@@ -17,42 +15,47 @@ const Income = () => {
     description: "",
     date: new Date().toISOString().split("T")[0],
   })
-    const preferences=useSelector((state)=>state.preferences)
+  const preferences = useSelector((state) => state.preferences)
 
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  useEffect(() => {
-    loadIncome()
-  }, [])
-
-  const loadIncome = async () => {
+  const loadIncome = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoading(true)
-      const data = await apiService.get(`/income/user/${user._id}`)
-      setIncome(data)
-    } catch (error) {
+      const res = await apiService.get(`/income/user/${user._id}`)
+      setIncome(res?.data || [])
+    } catch (err) {
       setError("Failed to load income data")
-      console.error("Error loading income:", error)
+      console.error("Error loading income:", err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    if (!user) return;
+    loadIncome()
+  }, [user, loadIncome])
+
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
+    if (!user?._id) {
+      setError("User not authenticated")
+      return;
+    }
     try {
       const incomeData = {
         ...formData,
-        amount: Number.parseFloat(formData.amount),
+        amount: Number.parseFloat(formData.amount) || 0,
         user_id: user._id,
-        date: new Date(formData.date).toISOString()
+        date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString()
       }
 
       if (editingIncome) {
-        const d = await apiService.editIncome(editingIncome, editingIncome._id);
+        await apiService.put(`/income/${editingIncome._id}`, incomeData)
         setSuccess("Income updated successfully!");
-        console.log(d);
       } else {
         await apiService.post("/income/add", incomeData)
         setSuccess("Income added successfully!")
@@ -66,32 +69,32 @@ const Income = () => {
         description: "",
         date: new Date().toISOString().split("T")[0],
       })
-      loadIncome()
-    } catch (error) {
-      setError(error.response?.data?.error || "Failed to save income")
-      console.error("Error saving income:", error)
+      await loadIncome()
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to save income")
+      console.error("Error saving income:", err)
     }
-  }
+  }, [formData, editingIncome, user, loadIncome])
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this income entry?")) {
-      try {
-        await apiService.delete(`/income/${id}`)
-        setSuccess("Income deleted successfully!")
-        loadIncome()
-      } catch (error) {
-        setError(error.response?.data?.message || "Failed to delete income")
-        console.error("Error deleting income:", error)
-      }
+  const handleDelete = useCallback(async (id) => {
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to delete this income entry?")) return;
+    try {
+      await apiService.delete(`/income/${id}`)
+      setSuccess("Income deleted successfully!")
+      await loadIncome()
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete income")
+      console.error("Error deleting income:", err)
     }
-  }
+  }, [loadIncome])
 
-  const openModal = (incomeItem = null) => {
+  const openModal = useCallback((incomeItem = null) => {
     if (incomeItem) {
       setEditingIncome(incomeItem)
       setFormData({
         source: incomeItem.source || "",
-        amount: incomeItem.amount || "",
+        amount: incomeItem.amount ?? "",
         description: incomeItem.description || "",
         date: incomeItem.date ? incomeItem.date.split('T')[0] : new Date().toISOString().split("T")[0],
       })
@@ -105,9 +108,9 @@ const Income = () => {
       })
     }
     setShowModal(true)
-  }
+  }, [])
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false)
     setEditingIncome(null)
     setFormData({
@@ -116,41 +119,9 @@ const Income = () => {
       description: "",
       date: new Date().toISOString().split("T")[0],
     })
-  }
+  }, [])
 
-  // Chart data functions
-  const getSourceChartData = () => {
-    const sourceTotals = {};
-    
-    income.forEach(item => {
-      const source = item.source || 'Unknown';
-      sourceTotals[source] = (sourceTotals[source] || 0) + parseFloat(item.amount);
-    });
-
-    return Object.entries(sourceTotals).map(([name, amount]) => ({
-      name,
-      amount,
-      percentage: totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0
-    }));
-  };
-
-  const getMonthlyChartData = () => {
-    const monthlyTotals = {};
-    
-    income.forEach(item => {
-      const date = new Date(item.date);
-      const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + parseFloat(item.amount);
-    });
-
-    return Object.entries(monthlyTotals)
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-      .map(([name, amount]) => ({
-        name,
-        amount,
-        percentage: totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0
-      }));
-  };
+  const totalIncome = income.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
 
   if (loading) {
     return (
@@ -160,8 +131,6 @@ const Income = () => {
       </div>
     )
   }
-
-  const totalIncome = income.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
 
   return (
     <div className="income">
@@ -188,7 +157,7 @@ const Income = () => {
       <div className="summary-card">
         <div className="stat-item">
           <span className="stat-label">Total Income</span>
-          <span className="stat-value income-amount">{preferences.symbol}{totalIncome.toFixed(2)}</span>
+          <span className="stat-value income-amount">{preferences?.symbol || ""}{totalIncome.toFixed(2)}</span>
         </div>
         <div className="stat-item">
           <span className="stat-label">Number of Entries</span>
@@ -201,40 +170,63 @@ const Income = () => {
         <div className="chart-card">
           <h3>Income by Source</h3>
           <div className="chart-bars">
-            {getSourceChartData().map((item, index) => (
-              <div key={index} className="chart-bar-item">
-                <div className="bar-label">
-                  <span>{item.name}</span>
-                  <span>{preferences.symbol}{item.amount.toFixed(2)} ({item.percentage}%)</span>
-                </div>
-                <div className="bar-track">
-                  <div 
-                    className="bar-fill"
-                    style={{ width: `${item.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const sourceTotals = {};
+              income.forEach(item => {
+                const source = item.source || 'Unknown';
+                sourceTotals[source] = (sourceTotals[source] || 0) + (parseFloat(item.amount) || 0);
+              });
+              return Object.entries(sourceTotals).map(([name, amount], index) => {
+                const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0;
+                return (
+                  <div key={index} className="chart-bar-item">
+                    <div className="bar-label">
+                      <span>{name}</span>
+                      <span>{preferences?.symbol || ""}{amount.toFixed(2)} ({percentage}%)</span>
+                    </div>
+                    <div className="bar-track">
+                      <div 
+                        className="bar-fill"
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </div>
 
         <div className="chart-card">
           <h3>Income by Month</h3>
           <div className="chart-bars">
-            {getMonthlyChartData().map((item, index) => (
-              <div key={index} className="chart-bar-item">
-                <div className="bar-label">
-                  <span>{item.name}</span>
-                  <span>{preferences.symbol}{item.amount.toFixed(2)}</span>
-                </div>
-                <div className="bar-track">
-                  <div 
-                    className="bar-fill"
-                    style={{ width: `${item.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const monthlyTotals = {};
+              income.forEach(item => {
+                const date = item.date ? new Date(item.date) : new Date();
+                const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + (parseFloat(item.amount) || 0);
+              });
+              return Object.entries(monthlyTotals)
+                .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+                .map(([name, amount], index) => {
+                  const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0;
+                  return (
+                    <div key={index} className="chart-bar-item">
+                      <div className="bar-label">
+                        <span>{name}</span>
+                        <span>{preferences?.symbol || ""}{amount.toFixed(2)}</span>
+                      </div>
+                      <div className="bar-track">
+                        <div 
+                          className="bar-fill"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )
+                })
+            })()}
           </div>
         </div>
       </div>
@@ -244,18 +236,18 @@ const Income = () => {
         {income.length > 0 ? (
           <div className="income-grid">
             {income.map((item) => (
-              <div key={item.id} className="income-card">
+              <div key={item._id || item.id} className="income-card">
                 <div className="income-card-header">
                   <h3>{item.source}</h3>
                   <span className="income-amount">
-                    {preferences.symbol}{parseFloat(item.amount).toFixed(2)}
+                    {preferences?.symbol || ""}{(parseFloat(item.amount) || 0).toFixed(2)}
                   </span>
                 </div>
                 
                 <div className="income-card-details">
                   <div className="income-detail">
                     <span className="detail-label">Date:</span>
-                    <span>{new Date(item.date).toLocaleDateString()}</span>
+                    <span>{item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}</span>
                   </div>
                   {item.description && (
                     <div className="income-detail">
@@ -269,7 +261,7 @@ const Income = () => {
                   <button className="btn btn-edit btn-sm" onClick={() => openModal(item)}>
                     Edit
                   </button>
-                  <button className="btn btn-delete btn-sm" onClick={() => handleDelete(item.id)}>
+                  <button className="btn btn-delete btn-sm" onClick={() => handleDelete(item._id || item.id)}>
                     Delete
                   </button>
                 </div>
@@ -350,388 +342,6 @@ const Income = () => {
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .income {
-          background: #0a192f;
-          color: #f0f4f8;
-          min-height: 100vh;
-          padding: 20px;
-        }
-
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-
-        .page-title {
-          font-size: 24px;
-          margin: 0;
-          color: #f0f4f8;
-        }
-
-        .summary-card {
-          background: #112d4e;
-          border-radius: 8px;
-          padding: 20px;
-          margin-bottom: 20px;
-          display: flex;
-          gap: 40px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .stat-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .stat-label {
-          font-size: 14px;
-          color: #a8b2c3;
-        }
-
-        .stat-value {
-          font-size: 24px;
-          font-weight: bold;
-          color: #f0f4f8;
-        }
-
-        .income-amount {
-          color: #28a745;
-          font-weight: 600;
-        }
-
-        /* Charts Styles */
-        .charts-container {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-
-        .chart-card {
-          background: #112d4e;
-          border-radius: 8px;
-          padding: 20px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .chart-card h3 {
-          margin: 0 0 15px 0;
-          color: #f0f4f8;
-          font-size: 16px;
-        }
-
-        .chart-bars {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .chart-bar-item {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-        }
-
-        .bar-label {
-          display: flex;
-          justify-content: space-between;
-          font-size: 12px;
-          color: #f0f4f8;
-        }
-
-        .bar-track {
-          width: 100%;
-          height: 8px;
-          background: #1e3a5c;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-
-        .bar-fill {
-          height: 100%;
-          background: #28a745;
-          border-radius: 4px;
-          transition: width 0.3s ease;
-        }
-
-        /* Income Cards Styles */
-        .income-cards-container {
-          margin-top: 20px;
-        }
-
-        .income-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 20px;
-        }
-
-        .income-card {
-          background: #112d4e;
-          border-radius: 8px;
-          padding: 20px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          border: 1px solid #3a7ca5;
-        }
-
-        .income-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 15px;
-        }
-
-        .income-card-header h3 {
-          margin: 0;
-          color: #f0f4f8;
-          font-size: 16px;
-          flex: 1;
-          margin-right: 10px;
-        }
-
-        .income-card-details {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 15px;
-        }
-
-        .income-detail {
-          display: flex;
-          justify-content: space-between;
-          font-size: 14px;
-        }
-
-        .detail-label {
-          color: #a8b2c3;
-          font-weight: 500;
-        }
-
-        .income-description {
-          max-width: 150px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .income-card-actions {
-          display: flex;
-          gap: 10px;
-          justify-content: flex-end;
-        }
-
-        /* Buttons */
-        .btn {
-          padding: 8px 16px;
-          border-radius: 4px;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-          transition: background 0.3s ease;
-        }
-
-        .btn-primary {
-          background: #3a7ca5;
-          color: #f0f4f8;
-        }
-
-        .btn-primary:hover {
-          background: #1e3a5c;
-        }
-
-        .btn-secondary {
-          background: #6c757d;
-          color: #f0f4f8;
-        }
-
-        .btn-edit {
-          background: #28a745;
-          color: #fff;
-        }
-
-        .btn-edit:hover {
-          background: #218838;
-        }
-
-        .btn-delete {
-          background: #dc3545;
-          color: #fff;
-        }
-
-        .btn-delete:hover {
-          background: #b52a37;
-        }
-
-        .btn-sm {
-          padding: 6px 12px;
-          font-size: 12px;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: #112d4e;
-          border-radius: 8px;
-          width: 100%;
-          max-width: 500px;
-          max-height: 90vh;
-          overflow-y: auto;
-          color: #f0f4f8;
-        }
-
-        .modal-header {
-          padding: 16px 20px;
-          border-bottom: 1px solid #3a7ca5;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 20px;
-        }
-
-        form {
-          padding: 20px;
-        }
-
-        .form-group {
-          margin-bottom: 16px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 6px;
-          font-weight: 500;
-          color: #f0f4f8;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #3a7ca5;
-          border-radius: 4px;
-          font-size: 14px;
-          background: #0a192f;
-          color: #f0f4f8;
-        }
-
-        .form-group textarea {
-          resize: vertical;
-          min-height: 80px;
-        }
-
-        .form-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 20px;
-        }
-
-        /* Alerts */
-        .alert {
-          padding: 12px 16px;
-          border-radius: 4px;
-          margin-bottom: 16px;
-          position: relative;
-        }
-
-        .alert-error {
-          background: #f8d7da;
-          color: #721c24;
-          border: 1px solid #f5c6cb;
-        }
-
-        .alert-success {
-          background: #d4edda;
-          color: #155724;
-          border: 1px solid #c3e6cb;
-        }
-
-        .close-btn {
-          position: absolute;
-          right: 8px;
-          top: 8px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 16px;
-          padding: 0;
-        }
-
-        /* Loading */
-        .loading-screen {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 200px;
-          color: #f0f4f8;
-        }
-
-        .spinner {
-          border: 4px solid rgba(255,255,255,0.1);
-          border-radius: 50%;
-          border-top: 4px solid #3a7ca5;
-          width: 40px;
-          height: 40px;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .no-income {
-          text-align: center;
-          padding: 40px 20px;
-          color: #a8b2c3;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-          .charts-container {
-            grid-template-columns: 1fr;
-          }
-          
-          .income-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .income-card-header {
-            flex-direction: column;
-            gap: 10px;
-          }
-          
-          .income-card-header h3 {
-            margin-right: 0;
-          }
-          
-          .summary-card {
-            flex-direction: column;
-            gap: 20px;
-          }
-        }
-      `}</style>
     </div>
   )
 }

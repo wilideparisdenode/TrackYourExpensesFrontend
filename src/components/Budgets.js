@@ -1,5 +1,6 @@
+// ...existing code...
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import { Wallet, CalendarEvent, Trash, PencilSquare, PieChart, ArrowUpRight, ArrowDownRight } from "react-bootstrap-icons";
@@ -18,59 +19,71 @@ const Budgets = () => {
     end_date: "",
     income_id: ""
   })
-  const preferences=useSelector((state)=>state.preferences);
-  const color=useSelector((state)=>state.mode.theme);
+  const preferences = useSelector((state) => state.preferences);
+  const color = useSelector((state) => state.mode.theme);
  
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [incomes, setIncomes] = useState([])
   const [trackingData, setTrackingData] = useState(null)
 
-  useEffect(() => {
-    loadBudgets()
-    loadIncomes()
-  }, [])
-
-  const loadBudgets = async () => {
+  // loadBudgets and loadIncomes wrapped in useCallback to satisfy exhaustive-deps
+  const loadBudgets = useCallback(async () => {
+    if (!user?._id) return;
     try {
       setLoading(true)
-      const data = await apiService.get(`/budget/${user._id}`)
-      setBudgets(data.data)
-    } catch (error) {
+      const res = await apiService.get(`/budget/${user._id}`)
+      setBudgets(res?.data || [])
+    } catch (err) {
       setError("Failed to load budgets")
-      console.error("Error loading budgets:", error)
+      console.error("Error loading budgets:", err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
-  const loadIncomes = async () => {
+  const loadIncomes = useCallback(async () => {
+    if (!user?._id) return;
     try {
-      const data = await apiService.get(`/income/user/${user._id}`)
-      setIncomes(data)
-    } catch (error) {
-      console.error("Error loading incomes:", error)
+      const res = await apiService.get(`/income/user/${user._id}`)
+      setIncomes(res?.data || [])
+    } catch (err) {
+      console.error("Error loading incomes:", err)
     }
-  }
+  }, [user])
 
-  const trackBudget = async (budget) => {
+  useEffect(() => {
+    if (!user) return;
+    loadBudgets()
+    loadIncomes()
+  }, [user, loadBudgets, loadIncomes])
+
+  const trackBudget = useCallback(async (budget) => {
+    if (!user?._id || !budget?.income_id) {
+      setError("Cannot track budget: missing user or income id")
+      return;
+    }
     try {
-      const data = await apiService.get(`/budget/view/${user._id}/${budget.income_id}`)
-      setTrackingData(data)
-    } catch (error) {
-      setError("Failed to track budget: " + (error.response?.data?.message || error.message))
-      console.error("Error details:", error)
+      const res = await apiService.get(`/budget/view/${user._id}/${budget.income_id}`)
+      setTrackingData(res?.data || null)
+    } catch (err) {
+      setError("Failed to track budget: " + (err.response?.data?.message || err.message))
+      console.error("Error details:", err)
     }
-  }
+  }, [user])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
+    if (!user?._id) {
+      setError("User not authenticated")
+      return;
+    }
     try {
       const budgetData = {
         ...formData,
-        amount: Number.parseFloat(formData.amount),
+        amount: Number.parseFloat(formData.amount) || 0,
         user_id: user._id,
-        end_date: new Date(formData.end_date).toISOString()
+        end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null
       }
 
       if (editingBudget) {
@@ -85,32 +98,31 @@ const Budgets = () => {
       setEditingBudget(null)
       setFormData({ description: "", amount: "", end_date: "", income_id: "" })
       loadBudgets()
-    } catch (error) {
-      setError(error.response?.data?.error || "Failed to save budget")
-      console.error("Error saving budget:", error)
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to save budget")
+      console.error("Error saving budget:", err)
     }
-  }
+  }, [formData, editingBudget, user, loadBudgets])
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this budget?")) {
-      try {
-        await apiService.delete(`/budget/${id}`)
-        setSuccess("Budget deleted successfully!")
-        loadBudgets()
-      } catch (error) {
-        setError("Failed to delete budget")
-        console.error("Error deleting budget:", error)
-      }
+  const handleDelete = useCallback(async (id) => {
+    if (!window.confirm("Are you sure you want to delete this budget?")) return;
+    try {
+      await apiService.delete(`/budget/${id}`)
+      setSuccess("Budget deleted successfully!")
+      loadBudgets()
+    } catch (err) {
+      setError("Failed to delete budget")
+      console.error("Error deleting budget:", err)
     }
-  }
+  }, [loadBudgets])
 
   const openModal = (budget = null) => {
     if (budget) {
       setEditingBudget(budget)
       setFormData({
         description: budget.description || "",
-        amount: budget.amount || "",
-        end_date: budget.end_date?.split('T')[0] || "",
+        amount: budget.amount ?? "",
+        end_date: budget.end_date ? budget.end_date.split('T')[0] : "",
         income_id: budget.income_id || ""
       })
     } else {
@@ -127,12 +139,18 @@ const Budgets = () => {
     setTrackingData(null)
   }
 
-  // Calculate budget statistics
+  // Calculate budget statistics (safe parsing)
   const getBudgetStats = () => {
-    const totalBudget = budgets.reduce((sum, budget) => sum + parseFloat(budget.amount), 0);
-    const activeBudgets = budgets.filter(budget => new Date(budget.end_date) > new Date()).length;
+    const totalBudget = budgets.reduce((sum, budget) => sum + (parseFloat(budget.amount) || 0), 0);
+    const activeBudgets = budgets.filter(budget => {
+      const end = new Date(budget.end_date);
+      if (isNaN(end)) return false;
+      return end > new Date();
+    }).length;
     const endingSoon = budgets.filter(budget => {
-      const daysLeft = Math.ceil((new Date(budget.end_date) - new Date()) / (1000 * 60 * 60 * 24));
+      const end = new Date(budget.end_date);
+      if (isNaN(end)) return false;
+      const daysLeft = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
       return daysLeft <= 7 && daysLeft > 0;
     }).length;
 
@@ -151,7 +169,7 @@ const Budgets = () => {
   }
 
   return (
-    <div className={`budgets ${color}` }>
+    <div className={`budgets ${color}`} >
       <div className="page-header">
         <div className="header-content">
           <h1 className="page-title">Budget Management</h1>
@@ -182,7 +200,7 @@ const Budgets = () => {
             <Wallet size={24} />
           </div>
           <div className="stat-content">
-            <h3>{preferences.symbol}{stats.totalBudget.toFixed(2)}</h3>
+            <h3>{preferences?.symbol || ""}{stats.totalBudget.toFixed(2)}</h3>
             <p>Total Budget</p>
           </div>
         </div>
@@ -215,25 +233,26 @@ const Budgets = () => {
           {budgets.length > 0 ? (
             budgets.map((budget) => {
               const incomeSource = incomes.find(i => i._id === budget.income_id)?.source || 'Not linked';
-              const daysLeft = Math.ceil((new Date(budget.end_date) - new Date()) / (1000 * 60 * 60 * 24));
-              const isExpired = daysLeft < 0;
+              const endDate = budget.end_date ? new Date(budget.end_date) : null;
+              const daysLeft = endDate ? Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+              const isExpired = daysLeft != null ? daysLeft < 0 : false;
               
               return (
                 <div key={budget._id} className="budget-card">
                   <div className="budget-card-header">
                     <div className="budget-title">
                       <h3>{budget.description}</h3>
-                      <span className={`status-badge ${isExpired ? 'expired' : daysLeft <= 7 ? 'ending' : 'active'}`}>
-                        {isExpired ? 'Expired' : daysLeft <= 7 ? 'Ending' : 'Active'}
+                      <span className={`status-badge ${isExpired ? 'expired' : daysLeft !== null && daysLeft <= 7 ? 'ending' : 'active'}`}>
+                        {isExpired ? 'Expired' : daysLeft !== null && daysLeft <= 7 ? 'Ending' : 'Active'}
                       </span>
                     </div>
-                    <div className="budget-amount">{preferences.symbol}{parseFloat(budget.amount).toFixed(2)}</div>
+                    <div className="budget-amount">{preferences?.symbol || ""}{(parseFloat(budget.amount) || 0).toFixed(2)}</div>
                   </div>
 
                   <div className="budget-details">
                     <div className="detail-item">
                       <CalendarEvent size={14} />
-                      <span>Ends: {new Date(budget.end_date).toLocaleDateString()}</span>
+                      <span>Ends: {endDate ? endDate.toLocaleDateString() : 'N/A'}</span>
                     </div>
                     <div className="detail-item">
                       <Wallet size={14} />
@@ -241,7 +260,7 @@ const Budgets = () => {
                     </div>
                     <div className="detail-item">
                       {isExpired ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                      <span>{isExpired ? 'Expired' : `${daysLeft} days left`}</span>
+                      <span>{isExpired ? 'Expired' : daysLeft !== null ? `${daysLeft} days left` : 'N/A'}</span>
                     </div>
                   </div>
 
@@ -297,20 +316,20 @@ const Budgets = () => {
             <div className="tracking-results">
               <div className="tracking-item">
                 <span>Budget Amount:</span>
-                <span className="amount">{preferences.symbol}{trackingData.budget}</span>
+                <span className="amount">{preferences?.symbol || ""}{trackingData?.budget ?? 0}</span>
               </div>
               <div className="tracking-item">
                 <span>Total Spending:</span>
-                <span className="amount spent">{preferences.symbol}{trackingData.totalSpending}</span>
+                <span className="amount spent">{preferences?.symbol || ""}{trackingData?.totalSpending ?? 0}</span>
               </div>
               <div className="tracking-item">
                 <span>Remaining Budget:</span>
-                <span className={`amount ${trackingData.remainingBudget >= 0 ? "remaining" : "over-budget"}`}>
-                 {preferences.symbol}{trackingData.remainingBudget}
+                <span className={`amount ${trackingData?.remainingBudget >= 0 ? "remaining" : "over-budget"}`}>
+                 {preferences?.symbol || ""}{trackingData?.remainingBudget ?? 0}
                 </span>
               </div>
-              <div className={`status-display ${trackingData.status.toLowerCase()}`}>
-                Status: <strong>{trackingData.status}</strong>
+              <div className={`status-display ${String(trackingData?.status || "").toLowerCase()}`}>
+                Status: <strong>{trackingData?.status || "N/A"}</strong>
               </div>
             </div>
           </div>
@@ -370,7 +389,7 @@ const Budgets = () => {
                   <option value="">Select Income Source</option>
                   {incomes.map((income) => (
                     <option key={income._id} value={income._id}>
-                      {income.source} ({preferences.symbol}{income.amount})
+                      {income.source} ({preferences?.symbol || ""}{income.amount})
                     </option>
                   ))}
                 </select>

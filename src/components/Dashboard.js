@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSelector } from "react-redux";
 
 import { useAuth } from "../context/AuthContext"
@@ -18,7 +18,6 @@ import {
 } from "react-bootstrap-icons"
 import "./Dashboard.css"
 
-
 const Dashboard = () => {
   const preferences=useSelector((state)=>state.preferences)
 
@@ -33,14 +32,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // const [lineData, setLineData] = useState([])
-  const [pieData, setPieData] = useState([])
-
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -76,40 +68,17 @@ const Dashboard = () => {
         recentExpenses: expenses.slice(0, 5),
         recentIncome: income.slice(0, 5)
       })
-
-      // build chart data
-      const grouped = {}
-      income.forEach((inc) => {
-        const d = new Date(inc.date).toLocaleDateString()
-        if (!grouped[d]) grouped[d] = { date: d, income: 0, expense: 0 }
-        grouped[d].income += inc.amount
-      })
-
-      expenses.forEach((exp) => {
-        const d = new Date(exp.date).toLocaleDateString()
-        if (!grouped[d]) grouped[d] = { date: d, income: 0, expense: 0 }
-        grouped[d].expense += exp.amount
-      })
-
-      // setLineData(Object.values(grouped))
-
-      const catGrouped = {}
-      expenses.forEach((exp) => {
-        const cat = exp.category_id || "Other"
-        if (!catGrouped[cat]) catGrouped[cat] = 0
-        catGrouped[cat] += exp.amount
-      })
-
-      // setPieData(
-      //   Object.entries(catGrouped).map(([name, value]) => ({ name, value }))
-      // )
     } catch (error) {
       console.error("Error loading dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")
     } finally {
       setLoading(false)
     }
-  }
+  }, [user._id])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
 
   if (loading) {
     return (
