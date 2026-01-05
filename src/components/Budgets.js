@@ -1,5 +1,3 @@
-// ...existing code...
-"use client"
 import { useState, useEffect, useCallback } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
