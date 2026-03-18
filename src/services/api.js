@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL|| "https://trackyourexpensesbackend.onrender.com"
+const API_BASE_URL =  "https://trackyourexpensesbackend.onrender.com"
 
 class ApiService {
   // ✅ Generic request method
@@ -172,7 +172,7 @@ console.log("API URL:", process.env.REACT_APP_API_URL);
   }
 
   async deleteIncome(id, userId) {
-    return this.request(`/income/${id}?userId=${userId}`, {
+    return this.request(`/income/${id}`, {
       method: "DELETE",
     })
   }

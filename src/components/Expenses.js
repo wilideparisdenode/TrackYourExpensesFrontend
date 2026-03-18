@@ -109,8 +109,8 @@ const Expenses = () => {
       };
 
       const response = editingExpense
-        ? await apiService.put(`/expense/${editingExpense._id}`, expenseData)
-        : await apiService.post("/expense/add", expenseData);
+        ? await apiService.updateExpense(editingExpense._id, expenseData)
+        : await apiService.addExpense( expenseData);
 
       const ok = response?.success ?? (response && !response.error);
       if (ok) {

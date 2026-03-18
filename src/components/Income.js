@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { apiService } from "../services/api"
 import { useAuth } from "../context/AuthContext"
-import { useSelector } from "react-redux";
+import { useSelector } from "react-redux"
 
 const Income = () => {
   const { user } = useAuth()
@@ -21,11 +21,11 @@ const Income = () => {
   const [success, setSuccess] = useState("")
 
   const loadIncome = useCallback(async () => {
-    if (!user?._id) return;
+    if (!user?._id) return
     try {
       setLoading(true)
       const res = await apiService.get(`/income/user/${user._id}`)
-      setIncome(res?.data || [])
+      setIncome(res || [])
     } catch (err) {
       setError("Failed to load income data")
       console.error("Error loading income:", err)
@@ -35,7 +35,7 @@ const Income = () => {
   }, [user])
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
     loadIncome()
   }, [user, loadIncome])
 
@@ -43,7 +43,7 @@ const Income = () => {
     e.preventDefault()
     if (!user?._id) {
       setError("User not authenticated")
-      return;
+      return
     }
     try {
       const incomeData = {
@@ -55,7 +55,7 @@ const Income = () => {
 
       if (editingIncome) {
         await apiService.put(`/income/${editingIncome._id}`, incomeData)
-        setSuccess("Income updated successfully!");
+        setSuccess("Income updated successfully!")
       } else {
         await apiService.post("/income/add", incomeData)
         setSuccess("Income added successfully!")
@@ -70,6 +70,8 @@ const Income = () => {
         date: new Date().toISOString().split("T")[0],
       })
       await loadIncome()
+      
+      setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err.response?.data?.error || "Failed to save income")
       console.error("Error saving income:", err)
@@ -77,12 +79,14 @@ const Income = () => {
   }, [formData, editingIncome, user, loadIncome])
 
   const handleDelete = useCallback(async (id) => {
-    if (!id) return;
-    if (!window.confirm("Are you sure you want to delete this income entry?")) return;
+    if (!id) return
+    if (!window.confirm("Are you sure you want to delete this income entry?")) return
     try {
       await apiService.delete(`/income/${id}`)
       setSuccess("Income deleted successfully!")
       await loadIncome()
+      
+      setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete income")
       console.error("Error deleting income:", err)
@@ -143,13 +147,13 @@ const Income = () => {
 
       {error && (
         <div className="alert alert-error">
-          <button onClick={() => setError("")} className="close-btn">×</button>
+          <button type="button" onClick={() => setError("")} className="close-btn">×</button>
           {error}
         </div>
       )}
       {success && (
         <div className="alert alert-success">
-          <button onClick={() => setSuccess("")} className="close-btn">×</button>
+          <button type="button" onClick={() => setSuccess("")} className="close-btn">×</button>
           {success}
         </div>
       )}
@@ -157,7 +161,7 @@ const Income = () => {
       <div className="summary-card">
         <div className="stat-item">
           <span className="stat-label">Total Income</span>
-          <span className="stat-value income-amount">{preferences?.symbol || ""}{totalIncome.toFixed(2)}</span>
+          <span className="stat-value income-amount">{preferences?.symbol || "$"}{totalIncome.toFixed(2)}</span>
         </div>
         <div className="stat-item">
           <span className="stat-label">Number of Entries</span>
@@ -165,24 +169,23 @@ const Income = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
       <div className="charts-container">
         <div className="chart-card">
           <h3>Income by Source</h3>
           <div className="chart-bars">
             {(() => {
-              const sourceTotals = {};
+              const sourceTotals = {}
               income.forEach(item => {
-                const source = item.source || 'Unknown';
-                sourceTotals[source] = (sourceTotals[source] || 0) + (parseFloat(item.amount) || 0);
-              });
+                const source = item.source || 'Unknown'
+                sourceTotals[source] = (sourceTotals[source] || 0) + (parseFloat(item.amount) || 0)
+              })
               return Object.entries(sourceTotals).map(([name, amount], index) => {
-                const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0;
+                const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0
                 return (
                   <div key={index} className="chart-bar-item">
                     <div className="bar-label">
                       <span>{name}</span>
-                      <span>{preferences?.symbol || ""}{amount.toFixed(2)} ({percentage}%)</span>
+                      <span>{preferences?.symbol || "$"}{amount.toFixed(2)} ({percentage}%)</span>
                     </div>
                     <div className="bar-track">
                       <div 
@@ -201,21 +204,21 @@ const Income = () => {
           <h3>Income by Month</h3>
           <div className="chart-bars">
             {(() => {
-              const monthlyTotals = {};
+              const monthlyTotals = {}
               income.forEach(item => {
-                const date = item.date ? new Date(item.date) : new Date();
-                const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + (parseFloat(item.amount) || 0);
-              });
+                const date = item.date ? new Date(item.date) : new Date()
+                const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + (parseFloat(item.amount) || 0)
+              })
               return Object.entries(monthlyTotals)
                 .sort((a, b) => new Date(a[0]) - new Date(b[0]))
                 .map(([name, amount], index) => {
-                  const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0;
+                  const percentage = totalIncome > 0 ? ((amount / totalIncome) * 100).toFixed(1) : 0
                   return (
                     <div key={index} className="chart-bar-item">
                       <div className="bar-label">
                         <span>{name}</span>
-                        <span>{preferences?.symbol || ""}{amount.toFixed(2)}</span>
+                        <span>{preferences?.symbol || "$"}{amount.toFixed(2)}</span>
                       </div>
                       <div className="bar-track">
                         <div 
@@ -231,7 +234,6 @@ const Income = () => {
         </div>
       </div>
 
-      {/* Income Cards */}
       <div className="income-cards-container">
         {income.length > 0 ? (
           <div className="income-grid">
@@ -240,7 +242,7 @@ const Income = () => {
                 <div className="income-card-header">
                   <h3>{item.source}</h3>
                   <span className="income-amount">
-                    {preferences?.symbol || ""}{(parseFloat(item.amount) || 0).toFixed(2)}
+                    {preferences?.symbol || "$"}{(parseFloat(item.amount) || 0).toFixed(2)}
                   </span>
                 </div>
                 
@@ -258,10 +260,10 @@ const Income = () => {
                 </div>
 
                 <div className="income-card-actions">
-                  <button className="btn btn-edit btn-sm" onClick={() => openModal(item)}>
+                  <button type="button" className="btn btn-edit btn-sm" onClick={() => openModal(item)}>
                     Edit
                   </button>
-                  <button className="btn btn-delete btn-sm" onClick={() => handleDelete(item._id || item.id)}>
+                  <button type="button" className="btn btn-delete btn-sm" onClick={() => handleDelete(item._id)}>
                     Delete
                   </button>
                 </div>
@@ -280,15 +282,16 @@ const Income = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingIncome ? "Edit Income" : "Add Income"}</h2>
-              <button className="close-btn" onClick={closeModal}>
+              <button type="button" className="close-btn" onClick={closeModal}>
                 ×
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Source*</label>
+                <label htmlFor="income-source">Source*</label>
                 <input
+                  id="income-source"
                   type="text"
                   value={formData.source}
                   onChange={(e) => setFormData({ ...formData, source: e.target.value })}
@@ -298,8 +301,9 @@ const Income = () => {
               </div>
 
               <div className="form-group">
-                <label>Amount*</label>
+                <label htmlFor="income-amount">Amount*</label>
                 <input
+                  id="income-amount"
                   type="number"
                   step="0.01"
                   min="0"
@@ -311,8 +315,9 @@ const Income = () => {
               </div>
 
               <div className="form-group">
-                <label>Description</label>
+                <label htmlFor="income-description">Description</label>
                 <textarea
+                  id="income-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Optional description"
@@ -321,8 +326,9 @@ const Income = () => {
               </div>
 
               <div className="form-group">
-                <label>Date*</label>
+                <label htmlFor="income-date">Date*</label>
                 <input
+                  id="income-date"
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}

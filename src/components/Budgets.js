@@ -31,7 +31,7 @@ const Budgets = () => {
     try {
       setLoading(true)
       const res = await apiService.get(`/budget/${user._id}`)
-      setBudgets(res?.data || [])
+      setBudgets(res?.data || res)
     } catch (err) {
       setError("Failed to load budgets")
       console.error("Error loading budgets:", err)
@@ -44,7 +44,7 @@ const Budgets = () => {
     if (!user?._id) return;
     try {
       const res = await apiService.get(`/income/user/${user._id}`)
-      setIncomes(res?.data || [])
+      setIncomes(res?.data || res)
     } catch (err) {
       console.error("Error loading incomes:", err)
     }
@@ -63,7 +63,7 @@ const Budgets = () => {
     }
     try {
       const res = await apiService.get(`/budget/view/${user._id}/${budget.income_id}`)
-      setTrackingData(res?.data || null)
+      setTrackingData(res?.data || res)
     } catch (err) {
       setError("Failed to track budget: " + (err.response?.data?.message || err.message))
       console.error("Error details:", err)

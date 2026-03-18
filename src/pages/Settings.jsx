@@ -110,7 +110,7 @@ const [personalInfo, setPersonalInfo] = useState({
         formData.append("file", personalInfo.file);
       }
 
-      const result = await apiService.changeinfo(formData);
+      const result = await apiService.changeInfo(formData);
       console.log("Update result:", result);
       
       if (result) {
